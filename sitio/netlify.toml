@@ -11,8 +11,3 @@
   from = "/propuesta"
   to = "/propuestas/"
   status = 301
-
-[[redirects]]
-  from = "/cotizar"
-  to = "/cotizador/"
-  status = 301
