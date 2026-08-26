@@ -11,13 +11,124 @@ a{color:var(--color-orange)}a:hover{color:var(--color-slate)}
 .docwrap{min-width:0;height:100vh;overflow:auto}
 doc-page:not(:defined){visibility:hidden}
 @media print{.app{display:block}.panel{display:none}.docwrap{height:auto;overflow:visible}}
+
+.mobile-tabs{display:none}
+
+@media (max-width:860px){
+  .mobile-tabs{
+    display:flex;position:sticky;top:0;z-index:20;background:#fff;
+    border-bottom:1px solid #ddd7cf;
+  }
+  .mobile-tabs button{
+    flex:1;padding:14px 10px;border:none;background:transparent;
+    font:700 11px var(--font-display);letter-spacing:.14em;text-transform:uppercase;
+    color:#8b939b;cursor:pointer;box-shadow:inset 0 -2px 0 transparent;
+  }
+  .mobile-tabs button.active{color:#2b3138;box-shadow:inset 0 -2px 0 #d5863b}
+
+  .app{display:block}
+  .panel{
+    position:static;height:auto;overflow-y:visible;
+    border-right:none;padding:18px 18px 32px;
+  }
+  .docwrap{height:auto;overflow:hidden;background:#e9e6e2;padding:18px 0 32px}
+
+  .app:not(.show-doc) .docwrap{display:none}
+  .app.show-doc .panel{display:none}
+
+  .panel input,.panel select{font-size:16px!important;padding:11px 10px!important}
+  .panel button{padding:13px 12px!important;font-size:11px!important}
+  .panel .row{grid-template-columns:1fr!important;gap:12px!important}
+}
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 </head><body>
+<div class="mobile-tabs" id="mobileTabs">
+<button type="button" data-tab="form" class="active">Formulario</button>
+<button type="button" data-tab="doc">Documento</button>
+</div>
 <div id="root"></div>
 <script src="doc-page.js"></script>
 <script type="text/babel" src="propuesta-doc.jsx"></script>
 <script type="text/babel" src="propuesta-app.jsx"></script>
+<script>
+(function(){
+  // Tabs de teléfono: alternan entre el formulario y el documento.
+  var tabs = document.getElementById('mobileTabs');
+  if (tabs) {
+    tabs.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-tab]');
+      if (!btn) return;
+      var app = document.querySelector('.app');
+      if (!app) return;
+      tabs.querySelectorAll('button').forEach(function (b) { b.classList.toggle('active', b === btn); });
+      app.classList.toggle('show-doc', btn.dataset.tab === 'doc');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      scheduleFit();
+    });
+  }
+
+  // En teléfono, la hoja del documento (tamaño carta) se escala para
+  // que quepa en el ancho de pantalla sin scroll horizontal.
+  var raf = null;
+  function scheduleFit() { if (raf) return; raf = requestAnimationFrame(function () { raf = null; fit(); }); }
+
+  function fit() {
+    var wrap = document.querySelector('.docwrap');
+    var dp = wrap && wrap.querySelector('doc-page');
+    if (!wrap || !dp) return;
+    if (window.innerWidth > 860) {
+      dp.style.transform = '';
+      wrap.style.height = '';
+      return;
+    }
+    var sheet = dp.shadowRoot && dp.shadowRoot.querySelector('.sheet');
+    if (!sheet) return;
+    // Reset before measuring: the host's own width auto-shrinks to its
+    // container (the fixed-width .sheet inside just overflows it), so we
+    // measure the shadow sheet directly plus the host's own padding to get
+    // the true, container-independent content size.
+    dp.style.transform = 'none';
+    var cs = getComputedStyle(dp);
+    var padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    var sheetRect = sheet.getBoundingClientRect();
+    var totalWidth = sheetRect.width + padX;
+    var totalHeight = sheetRect.height + padY;
+    var avail = wrap.clientWidth;
+    if (!totalWidth || !avail) return;
+    var scale = Math.min(1, avail / totalWidth);
+    dp.style.transformOrigin = 'top left';
+    dp.style.transform = 'scale(' + scale + ')';
+    wrap.style.height = Math.ceil(totalHeight * scale) + 'px';
+  }
+
+  window.addEventListener('resize', scheduleFit);
+  window.addEventListener('orientationchange', scheduleFit);
+
+  // The scale/height hacks above are inline styles, so they'd otherwise
+  // survive into the print output and shrink the PDF. Drop them right
+  // before printing and restore them after.
+  window.addEventListener('beforeprint', function () {
+    var wrap = document.querySelector('.docwrap');
+    var dp = wrap && wrap.querySelector('doc-page');
+    if (dp) dp.style.transform = '';
+    if (wrap) wrap.style.height = '';
+  });
+  window.addEventListener('afterprint', scheduleFit);
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var root = document.getElementById('root');
+    if (root) {
+      var mo = new MutationObserver(scheduleFit);
+      mo.observe(root, { subtree: true, childList: true, characterData: true, attributes: true });
+    }
+    scheduleFit();
+    setTimeout(scheduleFit, 300);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(scheduleFit);
+  });
+})();
+</script>
 </body></html>
