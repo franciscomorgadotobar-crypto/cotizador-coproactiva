@@ -118,7 +118,7 @@ function App() {
           <Field label="Preparada para">
             <input style={p.input} value={d.destinatario} onChange={e => set('destinatario', e.target.value)} placeholder="Comité de Administración" />
           </Field>
-          <div style={p.row}>
+          <div className="row" style={p.row}>
             <div>
               <label style={p.label}>Fecha</label>
               <input type="date" style={p.input} value={d.fecha} onChange={e => set('fecha', e.target.value)} />
@@ -133,7 +133,7 @@ function App() {
         <div style={p.group}>
           <h2 style={p.groupTitle}>Honorarios</h2>
           {pctFuera ? <p style={p.warn}>El modelo fija el porcentaje entre 8% y 10%.</p> : null}
-          <div style={p.row}>
+          <div className="row" style={p.row}>
             <div>
               <label style={p.label}>Base mensual GG.CC. ($)</label>
               <input type="number" min="0" step="1000" style={p.input} value={d.base} onChange={e => set('base', e.target.value)} placeholder="4500000" />
@@ -151,7 +151,7 @@ function App() {
           <Field label="Gasto autónomo urgencias ($)">
             <input type="number" min="0" step="10000" style={p.input} value={d.urgencia} onChange={e => set('urgencia', e.target.value)} placeholder="300000" />
           </Field>
-          <div style={p.row}>
+          <div className="row" style={p.row}>
             <div>
               <label style={p.label}>Días de pago</label>
               <input type="number" min="1" style={p.input} value={d.diasPago} onChange={e => set('diasPago', e.target.value)} />
