@@ -4,18 +4,31 @@
 *{box-sizing:border-box}body{margin:0;background:#e6e2dd;font-family:var(--font-body);color:var(--color-ink)}
 a{color:var(--color-orange);text-decoration:none}a:hover{color:var(--color-slate)}
 .wrap{max-width:880px;margin:0 auto;padding:64px 28px 80px}
+.rule{height:1.5px;background:#2b3138;margin-top:26px}
+.logo{display:block;height:28px;width:auto}
+h1{margin:26px 0 0;font-family:var(--font-display);font-weight:300;font-size:38px;line-height:1.15;letter-spacing:-.02em;color:#2b3138}
+.lead{margin:16px 0 0;font-size:16.5px;line-height:1.6;color:#5a636c;max-width:34em}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:44px}
 .card{display:flex;flex-direction:column;gap:10px;padding:26px 24px 24px;background:#fff;border:1px solid #ddd7cf;border-radius:3px;transition:border-color .18s,transform .18s}
 .card:hover{border-color:#d5863b;transform:translateY(-2px)}
 .k{font-family:var(--font-display);font-weight:700;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#d5863b}
 .t{font-family:var(--font-display);font-weight:600;font-size:21px;letter-spacing:-.01em;color:#2b3138}
 .d{font-size:15px;line-height:1.55;color:#5a636c}
+.foot{margin:56px 0 0;font-size:13.5px;color:#8b939b}
+@media (max-width:560px){
+  .wrap{padding:44px 20px 56px}
+  h1{font-size:29px}
+  .lead{font-size:15.5px}
+  .card{padding:22px 20px 20px}
+  .card:hover{transform:none}
+  .foot{margin-top:40px}
+}
 </style></head><body>
 <div class="wrap">
-<img src="logo-coproactiva.svg" alt="CoproActiva" style="display:block;height:28px;width:auto">
-<div style="height:1.5px;background:#2b3138;margin-top:26px"></div>
-<h1 style="margin:26px 0 0;font-family:var(--font-display);font-weight:300;font-size:38px;line-height:1.15;letter-spacing:-.02em;color:#2b3138">Herramientas de administración</h1>
-<p style="margin:16px 0 0;font-size:16.5px;line-height:1.6;color:#5a636c;max-width:34em">Uso interno. Los datos que ingresas quedan guardados solo en este navegador.</p>
+<img class="logo" src="logo-coproactiva.svg" alt="CoproActiva">
+<div class="rule"></div>
+<h1>Herramientas de administración</h1>
+<p class="lead">Uso interno. Los datos que ingresas quedan guardados solo en este navegador.</p>
 <div class="grid">
 <a class="card" href="propuestas/">
 <span class="k">Comercial</span>
@@ -23,6 +36,6 @@ a{color:var(--color-orange);text-decoration:none}a:hover{color:var(--color-slate
 <span class="d">Arma la propuesta comercial completa con los datos de la comunidad, calcula honorario, IVA y total, y la imprime o exporta a PDF.</span>
 </a>
 </div>
-<p style="margin:56px 0 0;font-size:13.5px;color:#8b939b">CoproActiva Administración SpA · contacto@coproactiva.cl</p>
+<p class="foot">CoproActiva Administración SpA · contacto@coproactiva.cl</p>
 </div>
 </body></html>
