@@ -10,11 +10,11 @@ a{color:var(--color-orange)}a:hover{color:var(--color-slate)}
 .panel button:disabled{opacity:.4;cursor:default}
 .docwrap{min-width:0;height:100vh;overflow:auto}
 doc-page:not(:defined){visibility:hidden}
-@media print{.app{display:block}.panel{display:none}.docwrap{height:auto;overflow:visible}}
+@media print{.app{display:block!important}.panel{display:none!important}.docwrap{height:auto!important;overflow:visible!important;display:block!important;background:#fff!important;padding:0!important}.mobile-tabs{display:none!important}}
 
 .mobile-tabs{display:none}
 
-@media (max-width:860px){
+@media screen and (max-width:860px){
   .mobile-tabs{
     display:flex;position:sticky;top:0;z-index:20;background:#fff;
     border-bottom:1px solid #ddd7cf;
