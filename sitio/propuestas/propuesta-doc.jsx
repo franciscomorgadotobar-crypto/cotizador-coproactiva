@@ -92,16 +92,14 @@ function PropuestaDoc({ d, calc, opts }) {
   const comunidad = d.comunidad.trim();
   const nombreEnTexto = comunidad || '[NOMBRE DEL EDIFICIO O CONDOMINIO]';
   const reglas = [
-    'La base de referencia corresponde al monto total mensual de gastos comunes ordinarios del condominio, antes de incorporar el honorario de administración, para evitar que el propio honorario forme parte de su base de cálculo.',
-    'El honorario base se expresa en pesos (sin decimales) y permanece fijo, por lo que no cambia por las variaciones mensuales del gasto común. Este monto base solo se actualizará una vez al año según la inflación (IPC), manteniéndose así a menos que ambas partes acuerden por escrito una nueva tarifa de referencia.',
-    'El valor del servicio se expresa en pesos sin decimales y se mantendrá fijo, sin verse afectado por las variaciones mensuales ordinarias del gasto común. Este monto se reajustará de forma anual según la variación del IPC y solo podrá ser modificado si ambas partes acuerdan una nueva base de referencia.'
-  ];
-  const condiciones = [
-    `Pago dentro de los primeros ${d.diasPago || '5'} días corridos de cada mes, mediante transferencia electrónica.`,
-    `Contrato de ${d.mesesContrato || '12'} meses, renovable automáticamente salvo aviso escrito con 60 días corridos de anticipación.`,
-    <>Gasto autónomo para urgencias: hasta <Ph value={calc.urgencia} hint="$[MONTO]" /> sin aprobación previa del Comité, con cargo al fondo operacional e informe en la rendición mensual siguiente (Art. 20 N°3, Ley N°21.442).</>,
-    'El honorario propuesto se sustenta en el diagnóstico previo realizado a la comunidad. Situaciones no reveladas al momento del diagnóstico que impliquen una carga adicional se tratarán mediante anexo específico acordado por escrito.'
-  ];
+        'La base de referencia corresponde al monto total mensual de gastos comunes ordinarios del condominio, antes de incorporar el honorario de administración, para evitar que el propio honorario forme parte de su base de cálculo.',
+        'El honorario base se expresa en pesos (sin decimales) y permanece fijo, por lo que no cambia por las variaciones mensuales del gasto común. Este monto base solo se actualizará una vez al año según la inflación (IPC), manteniéndose así a menos que ambas partes acuerden por escrito una nueva tarifa de referencia.',
+        'Los honorarios detallados en esta propuesta se presentan de manera referencial y quedarán sujetos a confirmación definitiva tras el diagnóstico de la situación operativa, administrativa y financiera actual del condominio.'
+      ];
+    const condiciones = [
+          `Pago dentro de los primeros ${d.diasPago || '5'} días corridos de cada mes, mediante transferencia electrónica.`,
+          `Contrato de ${d.mesesContrato || '12'} meses, renovable automáticamente salvo aviso escrito con 60 días corridos de anticipación.`
+        ];
   const noIncluidas = [
     'Servicios jurídicos: asesoría legal especializada, elaboración o modificación del reglamento de copropiedad y patrocinio en procedimientos que requieran abogado habilitado.',
     'Cobranza judicial. La cobranza extrajudicial a copropietarios morosos sí está incluida en el servicio.',
