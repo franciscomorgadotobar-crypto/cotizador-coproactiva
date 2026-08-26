@@ -3,6 +3,7 @@ const COMUNAS_RM = ['Alhué', 'Buin', 'Calera de Tango', 'Cerrillos', 'Cerro Nav
 const BLANK = { comunidad: '', direccion: '', comuna: '', destinatario: '', fecha: '', vigencia: '30', base: '', pct: '9', urgencia: '', diasPago: '5', mesesContrato: '12', email: '', firmante: '', cargo: '' };
 const KEY_ACTUAL = 'coproactiva.propuesta.actual.v1';
 const KEY_CLIENTES = 'coproactiva.propuesta.clientes.v1';
+const API_CLIENTES = '/api/propuestas';
 
 const clp = n => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(n);
 const numOf = v => { const n = parseFloat(String(v).replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : null; };
@@ -58,6 +59,16 @@ function App() {
   const [sel, setSel] = React.useState('');
 
   React.useEffect(() => { localStorage.setItem(KEY_ACTUAL, JSON.stringify(d)); }, [d]);
+
+  // Al abrir, trae la lista de clientes guardados desde el servidor
+  // (asi queda disponible en cualquier dispositivo), y de paso refresca
+  // la copia local que se usa como respaldo si no hay conexion.
+  React.useEffect(() => {
+    fetch(API_CLIENTES).then(r => r.ok ? r.json() : null).then(list => {
+      if (list) { setClientes(list); localStorage.setItem(KEY_CLIENTES, JSON.stringify(list)); }
+    }).catch(() => {});
+  }, []);
+
   const set = (k, v) => setD(p => ({ ...p, [k]: v }));
   const calc = computeAll(d);
 
@@ -66,12 +77,20 @@ function App() {
     if (!nombre) { alert('Escribe el nombre de la comunidad antes de guardar.'); return; }
     const next = { ...clientes, [nombre]: d };
     setClientes(next); localStorage.setItem(KEY_CLIENTES, JSON.stringify(next)); setSel(nombre);
+    fetch(API_CLIENTES, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, data: d })
+    }).catch(() => {});
   };
   const cargar = nombre => { setSel(nombre); if (clientes[nombre]) setD({ ...BLANK, ...clientes[nombre] }); };
   const eliminar = () => {
     if (!sel || !clientes[sel]) return;
     const next = { ...clientes }; delete next[sel];
     setClientes(next); localStorage.setItem(KEY_CLIENTES, JSON.stringify(next)); setSel('');
+    fetch(API_CLIENTES, {
+      method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: sel })
+    }).catch(() => {});
   };
   const nueva = () => { setD({ ...BLANK }); setSel(''); };
 
