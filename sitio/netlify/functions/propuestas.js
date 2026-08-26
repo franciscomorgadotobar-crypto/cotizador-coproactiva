@@ -1,7 +1,7 @@
 import { getStore } from "@netlify/blobs";
 
 export default async (req) => {
-  const store = getStore("propuestas-clientes");
+  const store = getStore({ name: "propuestas-clientes", consistency: "strong" });
   try {
     if (req.method === "GET") {
       const list = (await store.get("clientes", { type: "json" })) || {};
