@@ -105,3 +105,13 @@ opcional; sirve para ajustes puntuales posteriores.
 - 04 — Supervisión · Jefatura: _(pendiente)_
 - 05 — Controles recibidos: _(pendiente)_
 - 06 — Detalle de control: _(pendiente)_
+- 07 — Tarjeta de oportunidad (set): _(pendiente)_
+- 07 — Celda de calendario (set): _(pendiente)_
+- 07 — Fila de conversación (set): _(pendiente)_
+- 08 — Panel · Admin: _(pendiente)_
+- 09 — CRM · Oportunidades: _(pendiente)_
+- 10 — Detalle de oportunidad: _(pendiente)_
+- 11 — Contratos: _(pendiente)_
+- 12 — Calendario: _(pendiente)_
+- 13 — Correo · contacto@coproactiva: _(pendiente)_
+- 14 — Mensajes · Terreno: _(pendiente)_
