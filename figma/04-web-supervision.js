@@ -183,8 +183,22 @@ cont.appendChild(fila);
 fila.layoutSizingHorizontal = 'FILL';
 fila.layoutSizingVertical = 'FILL';
 
+// El componente "Panel de sección" queda en Fundaciones como pieza del sistema, pero
+// acá el panel se construye con su misma anatomía: Figma no permite agregar hijos
+// dentro de una instancia, y el cuerpo de cada panel lleva contenido propio.
 const nuevoPanel = (titulo, accion, ancho) => {
-  const inst = panelComp.createInstance();
+  const inst = figma.createFrame();
+  inst.name = 'Panel · ' + titulo;
+  inst.layoutMode = 'VERTICAL';
+  inst.itemSpacing = 0;
+  inst.primaryAxisSizingMode = 'AUTO';
+  inst.counterAxisSizingMode = 'FIXED';
+  inst.resize(700, 240);
+  inst.fills = [paint(V.blanco, H.blanco)];
+  inst.strokes = [paint(V.bordeBase, H.bordeBase)];
+  inst.strokeWeight = 1;
+  radios(inst, V.radioTarjeta);
+  inst.clipsContent = true;
   fila.appendChild(inst);
   if (ancho) {
     inst.resize(ancho, inst.height);
@@ -193,10 +207,33 @@ const nuevoPanel = (titulo, accion, ancho) => {
     inst.layoutSizingHorizontal = 'FILL';
   }
   inst.layoutSizingVertical = 'FILL';
-  const ts = inst.findAllWithCriteria({ types: ['TEXT'] });
-  if (ts[0]) ts[0].characters = titulo;
-  if (ts[1]) ts[1].characters = accion;
-  const cuerpo = inst.findOne(n => n.name === 'Cuerpo');
+
+  const pcab = figma.createFrame();
+  pcab.name = 'Cabecera';
+  pcab.layoutMode = 'HORIZONTAL';
+  pcab.counterAxisAlignItems = 'CENTER';
+  pcab.itemSpacing = 12;
+  pcab.counterAxisSizingMode = 'AUTO';
+  pcab.paddingTop = 16; pcab.paddingBottom = 16; pcab.paddingLeft = 18; pcab.paddingRight = 18;
+  pcab.fills = [];
+  bordeInferior(pcab);
+  inst.appendChild(pcab);
+  pcab.layoutSizingHorizontal = 'FILL';
+  const ptit = txt(titulo, 'etiqueta/grupo', V.titulo, H.titulo);
+  pcab.appendChild(ptit);
+  ptit.layoutSizingHorizontal = 'FILL';
+  ptit.textAutoResize = 'HEIGHT';
+  if (accion) pcab.appendChild(txt(accion, 'etiqueta/chip', V.naranja, H.naranja));
+
+  const cuerpo = figma.createFrame();
+  cuerpo.name = 'Cuerpo';
+  cuerpo.layoutMode = 'VERTICAL';
+  cuerpo.itemSpacing = 0;
+  cuerpo.counterAxisSizingMode = 'AUTO';
+  cuerpo.fills = [];
+  inst.appendChild(cuerpo);
+  cuerpo.layoutSizingHorizontal = 'FILL';
+
   return { inst, cuerpo };
 };
 
