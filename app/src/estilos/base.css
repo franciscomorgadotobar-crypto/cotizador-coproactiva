@@ -1,0 +1,255 @@
+/* Estilos base y componentes del sistema.
+ *
+ * Los valores (padding 9/10 en campos, 11/12 en botones, tracking .16em en
+ * etiquetas) vienen de panelStyles en sitio/propuestas/propuesta-app.jsx. No son
+ * aproximaciones: son los mismos números que ya usa el generador de propuestas.
+ *
+ * En móvil los campos suben a 16px de tipografía, como la media query del sitio.
+ * Menos de 16px hace que iOS haga zoom solo al enfocar un campo. */
+
+* { box-sizing: border-box; }
+
+html, body, #raiz { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--fondo-app);
+  color: var(--texto-titulo);
+  font: 400 15px/1.55 var(--fuente-cuerpo);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--naranja); text-decoration: none; }
+a:hover { color: var(--pizarra); }
+
+/* ------------------------------------------------------------ Tipografía */
+
+.h1 {
+  margin: 0;
+  font: 300 38px/1.15 var(--fuente-display);
+  letter-spacing: -0.02em;
+  color: var(--texto-titulo);
+}
+.h2 {
+  margin: 0;
+  font: 600 21px/1.3 var(--fuente-display);
+  letter-spacing: -0.01em;
+  color: var(--texto-titulo);
+}
+.h3 {
+  margin: 0;
+  font: 600 17px/1.35 var(--fuente-display);
+  color: var(--texto-titulo);
+}
+.dato {
+  font: 300 32px/1.1 var(--fuente-display);
+  letter-spacing: -0.02em;
+}
+.dato-chico { font: 600 15px/1.3 var(--fuente-display); }
+
+.etiqueta-grupo {
+  font: 700 10px/1.2 var(--fuente-display);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--texto-titulo);
+}
+.etiqueta-campo {
+  display: block;
+  font: 700 9.5px/1.2 var(--fuente-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  margin-bottom: 6px;
+}
+.micro { font-size: 12.5px; line-height: 1.45; color: var(--texto-tenue); }
+.chico { font-size: 13.5px; line-height: 1.45; }
+.apagado { color: var(--texto-apagado); }
+.tenue { color: var(--texto-tenue); }
+
+/* ---------------------------------------------------------------- Botones */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid var(--tinta);
+  border-radius: var(--radio-control);
+  background: var(--tinta);
+  color: var(--texto-inverso);
+  font: 600 11px/1 var(--fuente-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.boton:hover:not(:disabled) { background: #1f242a; }
+.boton:disabled { opacity: 0.4; cursor: default; }
+
+.boton-secundario {
+  border-color: var(--borde);
+  background: transparent;
+  color: var(--pizarra);
+}
+.boton-secundario:hover:not(:disabled) { background: var(--hover); border-color: var(--naranja); }
+
+.boton-texto {
+  border-color: transparent;
+  background: transparent;
+  color: var(--naranja);
+  padding: 6px 4px;
+}
+.boton-texto:hover:not(:disabled) { background: transparent; color: var(--pizarra); }
+
+/* En terreno todo botón llega al mínimo táctil. */
+.boton-movil { min-height: var(--tactil); padding: 15px 16px; }
+.boton-ancho { width: 100%; }
+
+/* ----------------------------------------------------------------- Campos */
+
+.campo { margin-bottom: 12px; }
+
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  font: 400 14.5px var(--fuente-cuerpo);
+  color: var(--texto-titulo);
+  outline: none;
+}
+.campo textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus { border-color: var(--borde-foco); }
+.campo input::placeholder, .campo textarea::placeholder { color: var(--texto-tenue); }
+
+.campo-error input,
+.campo-error textarea { border-color: var(--critico-borde); }
+.mensaje-error { margin-top: 5px; font-size: 12.5px; color: var(--critico-texto); }
+
+/* 16px evita que iOS haga zoom al enfocar. */
+@media (max-width: 860px) {
+  .campo input,
+  .campo select,
+  .campo textarea { font-size: 16px; padding: 11px 10px; }
+}
+
+/* ---------------------------------------------------------------- Tarjetas */
+
+.tarjeta {
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-tarjeta);
+}
+
+.aviso {
+  padding: 10px 12px;
+  border: 1px solid var(--alerta-borde);
+  border-radius: var(--radio-control);
+  background: var(--alerta-fondo);
+  color: var(--alerta-texto);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.aviso-critico {
+  border-color: var(--critico-borde);
+  background: var(--critico-fondo);
+  color: var(--critico-texto);
+}
+
+/* ------------------------------------------------------------------- Chips */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  font: 600 9.5px/1.2 var(--fuente-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.chip-cumple    { background: var(--ok-fondo);      border-color: var(--ok-borde);      color: var(--ok-texto); }
+.chip-alerta    { background: var(--alerta-fondo);  border-color: var(--alerta-borde);  color: var(--alerta-texto); }
+.chip-critico   { background: var(--critico-fondo); border-color: var(--critico-borde); color: var(--critico-texto); }
+.chip-pendiente { background: var(--info-fondo);    border-color: var(--info-borde);    color: var(--info-texto); }
+
+/* --------------------------------------------------------------- Estructura */
+
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--fondo-app);
+}
+
+/* Deja respirar la barra de estado y el indicador de inicio del teléfono. */
+.encabezado {
+  padding: max(12px, env(safe-area-inset-top)) 16px 14px;
+  background: var(--tarjeta);
+  border-bottom: 1px solid var(--borde);
+}
+.pie-fijo {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  padding: 14px 16px calc(14px + env(safe-area-inset-bottom));
+  background: var(--tarjeta);
+  border-top: 1px solid var(--borde);
+}
+
+.cuerpo { flex: 1; padding: 18px 16px; }
+
+.fila { display: flex; align-items: center; gap: 12px; }
+.columna { display: flex; flex-direction: column; }
+.crece { flex: 1; min-width: 0; }
+
+.grupo-titulo {
+  padding-bottom: 8px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+/* Barra de avance del control. */
+.barra {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--niebla);
+  overflow: hidden;
+}
+.barra > div { height: 100%; background: var(--naranja); border-radius: 2px; }
+
+/* ------------------------------------------------- Selector de tres estados */
+
+.selector { display: flex; gap: 6px; }
+.selector button {
+  flex: 1;
+  min-height: var(--tactil);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  font: 600 9.5px/1.2 var(--fuente-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  cursor: pointer;
+}
+.selector button[aria-pressed='true'] { border-width: 1.5px; }
+.selector button.cumple[aria-pressed='true']  { background: var(--ok-fondo);      border-color: var(--ok-borde);      color: var(--ok-texto); }
+.selector button.observacion[aria-pressed='true'] { background: var(--alerta-fondo); border-color: var(--alerta-borde); color: var(--alerta-texto); }
+.selector button.critico[aria-pressed='true'] { background: var(--critico-fondo); border-color: var(--critico-borde); color: var(--critico-texto); }
+
+/* ------------------------------------------------------------------ Estados */
+
+.cargando, .vacio {
+  padding: 40px 16px;
+  text-align: center;
+  color: var(--texto-tenue);
+  font-size: 13.5px;
+}

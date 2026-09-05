@@ -1,0 +1,80 @@
+/* Tokens de marca de CoproActiva.
+ *
+ * Los mismos valores que sitio/styles.css y que las variables del archivo de
+ * Figma. Si un color cambia, cambia acá y en esos dos lugares.
+ *
+ * Los estados (ok, alerta, crítico) no existían en el sitio: se derivaron del
+ * ámbar del aviso del generador de propuestas, con el mismo patrón de fondo
+ * claro, borde y texto oscuro. */
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat-VariableFont_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Source Sans Pro';
+  src: url('/fonts/SourceSansPro-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --fuente-display: 'Montserrat', system-ui, sans-serif;
+  --fuente-cuerpo: 'Source Sans Pro', system-ui, sans-serif;
+
+  /* Marca */
+  --naranja: #d5863b;
+  --pizarra: #4a5a68;
+  --tinta: #2b3138;
+  --papel: #f7f4f0;
+  --niebla: #e9e6e2;
+
+  /* Superficies */
+  --fondo-app: #e6e2dd;
+  --tarjeta: #ffffff;
+  --hover: #faf8f5;
+
+  /* Bordes */
+  --borde: #ddd7cf;
+  --borde-suave: #e9e6e2;
+  --borde-foco: #d5863b;
+
+  /* Texto */
+  --texto-titulo: #2b3138;
+  --texto-cuerpo: #3a4149;
+  --texto-apagado: #5a636c;
+  --texto-suave: #6b7480;
+  --texto-tenue: #8b939b;
+  --texto-inverso: #ffffff;
+
+  /* Estados */
+  --ok-texto: #4e6b4a;
+  --ok-fondo: #eef1e9;
+  --ok-borde: #d8e0cf;
+  --alerta-texto: #8a5f22;
+  --alerta-fondo: #fdf3e6;
+  --alerta-borde: #f0dcbd;
+  --critico-texto: #93392b;
+  --critico-fondo: #fbeeeb;
+  --critico-borde: #edd2cb;
+  --info-texto: #4a5a68;
+  --info-fondo: #eef0f2;
+  --info-borde: #d7dde2;
+
+  /* Radios */
+  --radio-control: 2px;
+  --radio-tarjeta: 3px;
+  --radio-pastilla: 999px;
+
+  /* Alto mínimo de un objetivo táctil. Bajo esto no se pone nada que se toque
+   * con el dedo en terreno, con guantes o con el teléfono en una mano. */
+  --tactil: 44px;
+}
