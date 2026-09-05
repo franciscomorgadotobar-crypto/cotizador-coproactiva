@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<style>
+/* El manifest bloquea la red, así que no se pueden cargar Montserrat ni Source Sans
+   Pro desde Google Fonts: la interfaz del plugin usa la tipografía del sistema. Los
+   colores sí son los de marca, tomados de sitio/styles.css. */
+:root {
+  --naranja: #d5863b;
+  --tinta: #2b3138;
+  --pizarra: #4a5a68;
+  --papel: #f7f4f0;
+  --fondo: #e6e2dd;
+  --borde: #ddd7cf;
+  --borde-suave: #e9e6e2;
+  --apagado: #5a636c;
+  --tenue: #8b939b;
+  --ok: #4e6b4a;
+  --ok-fondo: #eef1e9;
+  --error: #93392b;
+  --error-fondo: #fbeeeb;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--tinta);
+  font: 400 13px/1.5 system-ui, -apple-system, sans-serif;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+header {
+  background: #fff;
+  border-bottom: 1px solid var(--borde);
+  padding: 14px 16px 12px;
+  flex: 0 0 auto;
+}
+h1 {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+.aviso {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--apagado);
+}
+.aviso b { color: var(--tinta); }
+
+.acciones {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--papel);
+  border-bottom: 1px solid var(--borde-suave);
+  flex: 0 0 auto;
+}
+.acciones .sep { flex: 1; }
+button {
+  font: 600 10px/1 system-ui, sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 9px 12px;
+  border-radius: 2px;
+  border: 1px solid var(--borde);
+  background: transparent;
+  color: var(--pizarra);
+  cursor: pointer;
+}
+button:hover:not(:disabled) { border-color: var(--naranja); color: var(--tinta); }
+button.primario {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: #fff;
+}
+button.primario:hover:not(:disabled) { background: #1f242a; color: #fff; }
+button:disabled { opacity: .4; cursor: default; }
+.enlace {
+  border: none;
+  padding: 4px 2px;
+  color: var(--naranja);
+  letter-spacing: .08em;
+}
+.enlace:hover:not(:disabled) { color: var(--pizarra); border: none; }
+
+#lista { flex: 1 1 auto; overflow-y: auto; padding: 12px 16px; }
+.grupo {
+  margin: 0 0 6px;
+  padding-top: 10px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--tenue);
+}
+.paso {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  background: #fff;
+  border: 1px solid var(--borde);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.paso:hover { border-color: var(--naranja); }
+.paso input { margin: 2px 0 0; accent-color: var(--naranja); }
+.paso .txt { flex: 1; min-width: 0; }
+.paso .nom { font-weight: 600; font-size: 12.5px; }
+.paso .meta { font-size: 11px; color: var(--tenue); margin-top: 2px; }
+.paso .estado { font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.paso[data-estado="ok"] { background: var(--ok-fondo); border-color: #d8e0cf; }
+.paso[data-estado="ok"] .estado { color: var(--ok); }
+.paso[data-estado="error"] { background: var(--error-fondo); border-color: #edd2cb; }
+.paso[data-estado="error"] .estado { color: var(--error); }
+.paso[data-estado="corriendo"] { border-color: var(--naranja); }
+.paso[data-estado="corriendo"] .estado { color: var(--naranja); }
+
+#log {
+  flex: 0 0 auto;
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 10px 16px 14px;
+  background: #fff;
+  border-top: 1px solid var(--borde);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--apagado);
+}
+#log p { margin: 0 0 3px; }
+#log .err { color: var(--error); }
+#log .ok { color: var(--ok); }
+#log:empty { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>CoproActiva · Constructor de interfaz</h1>
+  <p class="aviso">
+    Corre esto <b>solo en el archivo de diseño de CoproActiva</b>: los scripts referencian
+    variables y componentes por ID. Cada paso se ejecuta <b>una sola vez</b> — repetirlo
+    duplica lo que dibuja.
+  </p>
+</header>
+
+<div class="acciones">
+  <button type="button" class="enlace" id="todos">Marcar todos</button>
+  <button type="button" class="enlace" id="ninguno">Desmarcar</button>
+  <span class="sep"></span>
+  <button type="button" class="primario" id="ejecutar" disabled>Ejecutar</button>
+</div>
+
+<div id="lista"></div>
+<div id="log"></div>
+
+<script>
+var pasos = [];
+var corriendo = false;
+
+var lista = document.getElementById('lista');
+var log = document.getElementById('log');
+var btnEjecutar = document.getElementById('ejecutar');
+
+function escribir(texto, clase) {
+  var p = document.createElement('p');
+  if (clase) p.className = clase;
+  p.textContent = texto;
+  log.appendChild(p);
+  log.scrollTop = log.scrollHeight;
+}
+
+function seleccionados() {
+  return pasos
+    .filter(function (p) { return document.getElementById('chk-' + p.id).checked; })
+    .map(function (p) { return p.id; })
+    .sort();
+}
+
+function refrescarBoton() {
+  btnEjecutar.disabled = corriendo || seleccionados().length === 0;
+  btnEjecutar.textContent = corriendo ? 'Ejecutando…' : 'Ejecutar';
+}
+
+function pintar() {
+  lista.innerHTML = '';
+  var grupoActual = null;
+
+  pasos.forEach(function (paso) {
+    var grupo = paso.pagina;
+    if (grupo !== grupoActual) {
+      grupoActual = grupo;
+      var h = document.createElement('p');
+      h.className = 'grupo';
+      h.textContent = grupo;
+      lista.appendChild(h);
+    }
+
+    var fila = document.createElement('label');
+    fila.className = 'paso';
+    fila.id = 'paso-' + paso.id;
+
+    var chk = document.createElement('input');
+    chk.type = 'checkbox';
+    chk.id = 'chk-' + paso.id;
+    chk.addEventListener('change', refrescarBoton);
+    fila.appendChild(chk);
+
+    var txt = document.createElement('div');
+    txt.className = 'txt';
+    var nom = document.createElement('div');
+    nom.className = 'nom';
+    nom.textContent = paso.id + ' · ' + paso.nombre;
+    txt.appendChild(nom);
+    var meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = paso.requiere.length
+      ? 'Necesita los pasos ' + paso.requiere.join(' y ')
+      : 'Sin dependencias';
+    txt.appendChild(meta);
+    fila.appendChild(txt);
+
+    var estado = document.createElement('span');
+    estado.className = 'estado';
+    estado.id = 'estado-' + paso.id;
+    fila.appendChild(estado);
+
+    lista.appendChild(fila);
+  });
+
+  refrescarBoton();
+}
+
+document.getElementById('todos').addEventListener('click', function () {
+  pasos.forEach(function (p) { document.getElementById('chk-' + p.id).checked = true; });
+  refrescarBoton();
+});
+document.getElementById('ninguno').addEventListener('click', function () {
+  pasos.forEach(function (p) { document.getElementById('chk-' + p.id).checked = false; });
+  refrescarBoton();
+});
+
+btnEjecutar.addEventListener('click', function () {
+  var ids = seleccionados();
+  if (!ids.length) return;
+
+  // Avisar si falta una dependencia sin marcar. No se bloquea: puede haberse
+  // ejecutado en una sesión anterior, y el propio script aborta si de verdad falta.
+  pasos.forEach(function (p) {
+    if (ids.indexOf(p.id) === -1) return;
+    p.requiere.forEach(function (dep) {
+      if (ids.indexOf(dep) === -1) {
+        escribir('Aviso: el paso ' + p.id + ' necesita el ' + dep + ', que no está marcado. Si ya lo corriste antes, sigue.');
+      }
+    });
+  });
+
+  corriendo = true;
+  refrescarBoton();
+  ids.forEach(function (id) {
+    document.getElementById('paso-' + id).removeAttribute('data-estado');
+    document.getElementById('estado-' + id).textContent = '';
+  });
+  parent.postMessage({ pluginMessage: { tipo: 'ejecutar', ids: ids } }, '*');
+});
+
+onmessage = function (evento) {
+  var msg = evento.data.pluginMessage;
+  if (!msg) return;
+
+  if (msg.tipo === 'pasos') {
+    pasos = msg.pasos;
+    pintar();
+    return;
+  }
+
+  var fila = document.getElementById('paso-' + msg.id);
+  var estado = document.getElementById('estado-' + msg.id);
+
+  if (msg.tipo === 'inicio') {
+    if (fila) fila.setAttribute('data-estado', 'corriendo');
+    if (estado) estado.textContent = '···';
+    escribir(msg.id + ' · ' + msg.nombre + '…');
+  } else if (msg.tipo === 'ok') {
+    if (fila) fila.setAttribute('data-estado', 'ok');
+    if (estado) estado.textContent = 'Listo';
+    var detalle = msg.creados + (msg.creados === 1 ? ' elemento creado' : ' elementos creados');
+    if (msg.mutados) detalle += ', ' + msg.mutados + ' modificados';
+    escribir('   ' + detalle, 'ok');
+  } else if (msg.tipo === 'error') {
+    if (fila) fila.setAttribute('data-estado', 'error');
+    if (estado) estado.textContent = 'Error';
+    escribir('   ' + msg.mensaje, 'err');
+  } else if (msg.tipo === 'fin') {
+    corriendo = false;
+    refrescarBoton();
+    escribir(msg.fallo ? 'Se detuvo por un error. Revisa el mensaje y vuelve a marcar solo lo que falta.' : 'Terminado.');
+  }
+};
+</script>
+</body>
+</html>

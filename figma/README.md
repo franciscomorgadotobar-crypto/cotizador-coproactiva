@@ -7,13 +7,24 @@ gestión. Cada archivo `.js` de esta carpeta es **una sola llamada** a la herram
 **Archivo de destino:** `gf0OFDhZICYDTya9sHSzMm`
 <https://www.figma.com/design/gf0OFDhZICYDTya9sHSzMm>
 
-## Por qué están acá y no ejecutados
+## Cómo ejecutarlos: el plugin
+
+La vía recomendada es el **plugin de desarrollo** de `figma/plugin/`, que corre los 14
+scripts dentro de Figma sin conector MCP y sin límite de llamadas. Instrucciones en
+[`plugin/README.md`](plugin/README.md). En resumen: app de escritorio de Figma,
+*Plugins → Development → Import plugin from manifest…*, y elegir
+`figma/plugin/manifest.json`.
+
+También se pueden pegar en el parámetro `code` de `use_figma` cuando el conector MCP
+esté disponible (ver "Por el conector MCP" más abajo).
+
+## Por qué no quedaron ejecutados desde acá
 
 El plan Starter de Figma permite 20 llamadas al MCP por mes (`whoami` y crear archivo
 no cuentan; los scripts de dibujo y las capturas sí). La cuota se agotó al terminar la
-segunda pantalla móvil. Estos scripts quedan listos para correr cuando la cuota se
-reponga —el primer día del mes siguiente— o de inmediato si se sube a un plan Pro con
-asiento Full o Dev.
+segunda pantalla móvil, y después el conector se desconectó de la sesión sin volver.
+
+El plugin resuelve las dos cosas: no gasta cuota y no depende del conector.
 
 ## Orden de ejecución
 
@@ -59,18 +70,13 @@ componentes) y crean la pantalla en su página de destino con `page.loadAsync()`
 
 ### Costo en llamadas
 
-Son 14 llamadas solo para ejecutar, más una por cada captura de revisión. El plan
-Starter da 20 al mes, así que no alcanza para correrlos todos y revisarlos en un mismo
-ciclo. Dos caminos:
+Solo aplica si se ejecutan por el conector MCP: son 14 llamadas más una por cada
+captura de revisión, y el plan Starter da 20 al mes. Por el plugin no hay límite —
+esa es la razón principal para preferirlo.
 
-- **Por tandas**: primero el 01 al 06 (control en terreno) con sus capturas; el mes
-  siguiente el 07 al 14.
-- **Subiendo de plan**: con Pro y asiento Full o Dev son 200 llamadas al día, y todo
-  entra de una sentada con margen para ajustes.
+## Por el conector MCP
 
-## Cómo se ejecuta
-
-Desde una sesión con el MCP de Figma conectado:
+Alternativa al plugin, desde una sesión con el MCP de Figma conectado:
 
 ```
 use_figma({
