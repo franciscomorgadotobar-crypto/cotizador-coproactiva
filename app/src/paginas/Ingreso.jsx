@@ -28,7 +28,10 @@ export default function Ingreso() {
   return (
     <div className="pantalla" style={{ justifyContent: 'center', padding: '24px 20px' }}>
       <div style={{ width: '100%', maxWidth: 380, margin: '0 auto' }}>
-        <img src="/logo-coproactiva.svg" alt="CoproActiva" style={{ height: 26, marginBottom: 28 }} />
+        {/* BASE_URL, no una ruta absoluta: bajo GitHub Pages el sitio no está
+            en la raíz del dominio y "/logo…" apuntaría fuera del proyecto. */}
+        <img src={import.meta.env.BASE_URL + 'logo-coproactiva.svg'}
+             alt="CoproActiva" style={{ height: 26, marginBottom: 28 }} />
 
         <h1 className="h2" style={{ marginBottom: 6 }}>Ingresar</h1>
         <p className="chico apagado" style={{ margin: '0 0 24px' }}>

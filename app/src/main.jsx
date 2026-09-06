@@ -6,9 +6,14 @@ import App from './App';
 import './estilos/tokens.css';
 import './estilos/base.css';
 
+/* Bajo GitHub Pages la app vive en /cotizador-coproactiva/, así que el router
+ * tiene que descontar ese prefijo o ninguna ruta calza. BASE_URL lo entrega
+ * Vite a partir de `base`; en la raíz vale '/' y el basename queda vacío. */
+const raiz = import.meta.env.BASE_URL.replace(/\/$/, '');
+
 createRoot(document.getElementById('raiz')).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={raiz}>
       <ProveedorSesion>
         <App />
       </ProveedorSesion>
