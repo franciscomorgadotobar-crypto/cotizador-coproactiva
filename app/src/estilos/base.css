@@ -376,3 +376,183 @@ a:hover { color: var(--pizarra); }
   cursor: pointer;
 }
 .agregar-foto span { font-size: 19px; line-height: 1; }
+
+/* ------------------------------------------------------------- Tablero */
+
+/* Cuatro cifras y nada más. Un panel con gráficos en un teléfono de terreno
+   ocupa la pantalla sin responder la única pregunta que importa al abrir la
+   app: qué me queda por hacer hoy. */
+.tablero {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.tablero > div {
+  padding: 12px 8px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  border-top: 2px solid var(--borde);
+}
+.tablero .n {
+  margin: 0;
+  font: 700 20px/1 var(--fuente-display);
+  color: var(--texto-titulo);
+}
+.tablero .r {
+  margin: 4px 0 0;
+  font: 600 8.5px/1.2 var(--fuente-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+.tablero .ok      { border-top-color: var(--ok-borde); }
+.tablero .alerta  { border-top-color: var(--alerta-borde); }
+.tablero .critico { border-top-color: var(--critico-borde); }
+.tablero .critico .n { color: var(--critico-texto); }
+
+.acceso {
+  display: flex;
+  align-items: center;
+  min-height: var(--tactil);
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  color: var(--texto-titulo);
+  font: 600 11px/1.2 var(--fuente-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+
+.chip-critico {
+  background: var(--critico-fondo);
+  border-color: var(--critico-borde);
+  color: var(--critico-texto);
+}
+
+/* -------------------------------------------------- Tipos de ingreso */
+
+.campo-medida { position: relative; }
+.campo-medida .unidad {
+  position: absolute; right: 10px; bottom: 10px;
+  font: 600 11px/1 var(--fuente-display);
+  color: var(--texto-tenue);
+  letter-spacing: 0.08em;
+}
+
+/* Botones y no un deslizador: con guantes o con el teléfono en una mano,
+   arrastrar un control fino es impreciso y un 7 marcado por error pasa
+   desapercibido. */
+.escala-botones { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.escala-botones button {
+  min-height: 38px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  font: 600 13px/1 var(--fuente-display);
+  color: var(--texto-cuerpo);
+  cursor: pointer;
+}
+.escala-botones button[aria-pressed='true'] {
+  background: var(--naranja);
+  border-color: var(--naranja);
+  color: #fff;
+}
+.escala-extremos {
+  display: flex; justify-content: space-between;
+  margin-top: 5px;
+  font: 400 10px/1.2 var(--fuente-cuerpo);
+  color: var(--texto-tenue);
+}
+
+.opciones { display: flex; flex-wrap: wrap; gap: 6px; }
+.opciones button {
+  min-height: var(--tactil);
+  padding: 0 14px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  font: 600 11px/1 var(--fuente-display);
+  letter-spacing: 0.08em;
+  color: var(--texto-cuerpo);
+  cursor: pointer;
+}
+.opciones button[aria-pressed='true'] {
+  background: var(--naranja); border-color: var(--naranja); color: #fff;
+}
+
+.lista-marcas { display: flex; flex-direction: column; gap: 2px; }
+.marca {
+  display: flex; align-items: center; gap: 10px;
+  min-height: var(--tactil);
+  padding: 4px 2px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.marca input { width: 19px; height: 19px; accent-color: var(--naranja); flex: none; }
+.marca.activa span { color: var(--texto-titulo); font-weight: 600; }
+
+.lienzo-firma {
+  width: 100%;
+  height: 150px;
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  touch-action: none;   /* si no, el gesto de firmar desplaza la página */
+  display: block;
+}
+
+/* --------------------------------------------------- Editor de plantilla */
+
+.categoria-editable {
+  display: flex; align-items: center; gap: 4px;
+  margin-bottom: 6px;
+}
+.categoria-editable .nombre {
+  min-height: var(--tactil);
+  padding: 0;
+  border: none; background: none; text-align: left;
+  font: 600 11px/1.2 var(--fuente-display);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--naranja);
+  cursor: pointer;
+}
+.categoria-editable .mover {
+  width: 34px; height: 34px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  color: var(--texto-apagado);
+  cursor: pointer;
+}
+.categoria-editable .mover:disabled { opacity: 0.35; }
+
+.item-plantilla { padding: 0; margin-bottom: 8px; overflow: hidden; }
+.item-plantilla .cabecera {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: var(--tactil);
+  padding: 12px 14px;
+  border: none; background: none; text-align: left;
+  font-size: 13.5px; color: var(--texto-cuerpo);
+  cursor: pointer;
+}
+.item-plantilla .tipo {
+  display: block;
+  margin-top: 3px;
+  font: 600 9px/1.2 var(--fuente-display);
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+.item-plantilla .flecha { font-size: 16px; color: var(--texto-tenue); }
+.item-plantilla .detalle {
+  padding: 4px 14px 14px;
+  border-top: 1px solid var(--borde-suave);
+}
+.item-plantilla.abierto { border-color: var(--naranja); }
+
+.agregar-punto { padding: 10px 2px; font-size: 11px; }
+.boton-texto.peligro { color: var(--critico-texto); }

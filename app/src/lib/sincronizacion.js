@@ -60,11 +60,15 @@ export async function comprimir(archivo, ladoMaximo = 1600, calidad = 0.72) {
 }
 
 async function subirFoto(foto) {
-  const ruta = `${foto.comunidad_id}/${foto.control_id}/${foto.id}.jpg`;
+  // La firma se dibuja en un canvas y sale PNG; las fotos van comprimidas a
+  // JPEG. Subir una firma declarándola JPEG la deja ilegible en el informe.
+  const esFirma = foto.clase === 'firma';
+  const mime = esFirma ? 'image/png' : 'image/jpeg';
+  const ruta = `${foto.comunidad_id}/${foto.control_id}/${foto.id}.${esFirma ? 'png' : 'jpg'}`;
 
   const { error: errorSubida } = await supabase.storage
     .from('evidencia')
-    .upload(ruta, foto.blob, { contentType: 'image/jpeg', upsert: true });
+    .upload(ruta, foto.blob, { contentType: mime, upsert: true });
 
   // El bucket ya la tiene de un intento anterior que no alcanzó a registrar la
   // fila: no es un error, hay que seguir y crear el registro.
@@ -78,8 +82,11 @@ async function subirFoto(foto) {
     control_id: foto.control_id,
     control_item_id: foto.control_item_id,
     storage_path: ruta,
+    clase: foto.clase ?? 'foto',
+    firmante_nombre: foto.firmante_nombre ?? null,
+    firmante_rut: foto.firmante_rut ?? null,
     nombre_original: foto.nombre_original ?? null,
-    mime: 'image/jpeg',
+    mime,
     bytes: foto.blob.size,
     lat: foto.lat ?? null,
     lng: foto.lng ?? null,

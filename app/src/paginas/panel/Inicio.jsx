@@ -1,0 +1,188 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
+import { useSesion } from '../../lib/sesion';
+import { AvisoConexion } from '../../lib/estado';
+import { hayConexion } from '../../lib/sincronizacion';
+import { leerControles, guardarControl } from '../../lib/local';
+
+const CHIP = {
+  pendiente: ['chip-pendiente', 'Pendiente'],
+  en_curso: ['chip-alerta', 'En curso'],
+  enviado: ['chip-cumple', 'Enviado'],
+  anulado: ['chip-pendiente', 'Anulado']
+};
+
+export default function Inicio() {
+  const { perfil, salir } = useSesion();
+  const [controles, setControles] = useState(null);
+  const [error, setError] = useState(null);
+
+  const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
+
+  useEffect(() => {
+    let vigente = true;
+
+    // Sin señal se muestra lo descargado: llegar a un edificio y ver una lista
+    // vacía porque no hay red haría la app inútil justo cuando se necesita.
+    if (!hayConexion()) {
+      leerControles().then(l => vigente && setControles(l));
+      return () => { vigente = false; };
+    }
+
+    supabase
+      .from('controles_con_avance')
+      .select('id, estado, periodo, programado_para, enviado_en, checkin_en, items_evaluados, items_totales, items_criticos, comunidades(nombre, direccion, comuna)')
+      .order('programado_para', { ascending: true })
+      .then(({ data, error }) => {
+        if (!vigente) return;
+        if (error) {
+          setError(error.message);
+          leerControles().then(l => vigente && setControles(l));
+        } else {
+          setControles(data ?? []);
+          for (const c of data ?? []) guardarControl(c);
+        }
+      });
+
+    return () => { vigente = false; };
+  }, []);
+
+  /* El resumen mira los últimos 30 días. Un acumulado histórico deja de decir
+   * nada al tercer mes: lo que importa es si el trabajo de este mes va al día. */
+  const resumen = useMemo(() => {
+    if (!controles) return null;
+    const desde = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recientes = controles.filter(c => {
+      const f = c.enviado_en ?? c.programado_para ?? c.creado_en;
+      return f && new Date(f).getTime() >= desde;
+    });
+
+    return {
+      pendientes: controles.filter(c => c.estado === 'pendiente').length,
+      enCurso:    controles.filter(c => c.estado === 'en_curso').length,
+      enviados:   recientes.filter(c => c.estado === 'enviado').length,
+      criticos:   controles.reduce((n, c) => n + (c.items_criticos ?? 0), 0)
+    };
+  }, [controles]);
+
+  const abiertos = controles?.filter(c => c.estado !== 'enviado' && c.estado !== 'anulado') ?? [];
+  const cerrados = controles?.filter(c => c.estado === 'enviado') ?? [];
+
+  const hoy = new Date().toLocaleDateString('es-CL', {
+    weekday: 'long', day: 'numeric', month: 'long'
+  });
+
+  return (
+    <div className="pantalla">
+      <AvisoConexion />
+
+      <header className="encabezado">
+        <div className="fila">
+          <div className="crece">
+            <h1 className="h3">Hola, {perfil?.nombre?.split(' ')[0] ?? ''}</h1>
+            <p className="chico apagado" style={{ margin: '2px 0 0' }}>
+              {hoy.charAt(0).toUpperCase() + hoy.slice(1)}
+            </p>
+          </div>
+          <button className="boton boton-texto" onClick={salir}>Salir</button>
+        </div>
+      </header>
+
+      <div className="cuerpo">
+        {error && <div className="aviso aviso-critico">{error}</div>}
+
+        {/* Resumen de los últimos 30 días */}
+        {resumen && (
+          <div className="tablero">
+            <div>
+              <p className="n">{resumen.pendientes}</p>
+              <p className="r">Pendientes</p>
+            </div>
+            <div className={resumen.enCurso ? 'alerta' : ''}>
+              <p className="n">{resumen.enCurso}</p>
+              <p className="r">En curso</p>
+            </div>
+            <div className="ok">
+              <p className="n">{resumen.enviados}</p>
+              <p className="r">Enviados 30 d</p>
+            </div>
+            <div className={resumen.criticos ? 'critico' : ''}>
+              <p className="n">{resumen.criticos}</p>
+              <p className="r">Críticos</p>
+            </div>
+          </div>
+        )}
+
+        {puedeConfigurar && (
+          <Link to="/plantillas" className="acceso">
+            <span className="crece">Plantillas de levantamiento</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+        )}
+
+        <div className="grupo-titulo">
+          <span className="etiqueta-grupo">Por hacer</span>
+        </div>
+
+        {controles === null && !error && <p className="cargando">Cargando…</p>}
+        {controles && abiertos.length === 0 && (
+          <p className="vacio">No tienes levantamientos pendientes.</p>
+        )}
+        {abiertos.map(c => <Tarjeta key={c.id} c={c} />)}
+
+        {cerrados.length > 0 && (
+          <>
+            <div className="grupo-titulo" style={{ marginTop: 20 }}>
+              <span className="etiqueta-grupo">Realizados</span>
+            </div>
+            {cerrados.map(c => <Tarjeta key={c.id} c={c} />)}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Tarjeta({ c }) {
+  const [clase, texto] = CHIP[c.estado] ?? CHIP.pendiente;
+  const pct = c.items_totales ? Math.round((c.items_evaluados / c.items_totales) * 100) : 0;
+
+  return (
+    <Link to={`/control/${c.id}`} className="tarjeta"
+          style={{ display: 'block', padding: 16, marginBottom: 12, color: 'inherit' }}>
+      <div className="fila" style={{ marginBottom: 8 }}>
+        <span className="etiqueta-campo crece" style={{ margin: 0 }}>
+          {c.enviado_en
+            ? new Date(c.enviado_en).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
+            : c.programado_para
+              ? new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+              : c.periodo ?? ''}
+        </span>
+        {c.items_criticos > 0 && (
+          <span className="chip chip-critico">{c.items_criticos} crítico{c.items_criticos > 1 ? 's' : ''}</span>
+        )}
+        <span className={'chip ' + clase}>{texto}</span>
+      </div>
+
+      <p className="dato-chico" style={{ margin: 0 }}>{c.comunidades?.nombre}</p>
+      <p className="micro" style={{ margin: '3px 0 0' }}>
+        {[c.comunidades?.direccion, c.comunidades?.comuna].filter(Boolean).join(', ')}
+      </p>
+
+      {c.items_totales > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div className="fila" style={{ marginBottom: 5 }}>
+            <span className="micro crece">
+              {c.checkin_en
+                ? `Check-in ${new Date(c.checkin_en).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Sin check-in'}
+            </span>
+            <span className="micro">{c.items_evaluados} de {c.items_totales}</span>
+          </div>
+          <div className="barra"><div style={{ width: pct + '%' }} /></div>
+        </div>
+      )}
+    </Link>
+  );
+}

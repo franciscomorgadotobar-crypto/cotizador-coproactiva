@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSesion } from '../../lib/sesion';
 import { AvisoConexion } from '../../lib/estado';
+import CampoPunto from '../../componentes/CampoPunto';
 import { informeHtml, imprimirInforme } from '../../lib/informe';
 import { comprimir, hayConexion, sincronizar } from '../../lib/sincronizacion';
 import {
@@ -57,7 +58,7 @@ export default function Levantamiento() {
           .maybeSingle(),
         supabase
           .from('control_items')
-          .select('id, grupo, texto, orden, estado, nota, plantilla_item_id')
+          .select('id, grupo, texto, orden, estado, nota, respuesta, tipo_ingreso, config, plantilla_item_id')
           .eq('control_id', id)
           .order('orden')
       ]);
@@ -100,8 +101,9 @@ export default function Levantamiento() {
   const evaluados = items.filter(i => i.estado !== 'sin_evaluar').length;
   const pct = items.length ? Math.round((evaluados / items.length) * 100) : 0;
   const faltantes = items.length - evaluados;
-  const fotosDe = itemId => fotos.filter(f => f.control_item_id === itemId)
-                                 .sort((a, b) => a.orden - b.orden);
+  const fotosDe = itemId => fotos
+    .filter(f => f.control_item_id === itemId && f.clase !== 'firma')
+    .sort((a, b) => a.orden - b.orden);
 
   // ------------------------------------------------------------- Check-in
 
@@ -163,6 +165,39 @@ export default function Levantamiento() {
     setItems(xs => xs.map(x => (x.id === item.id ? actualizado : x)));
     await guardarItem(actualizado);
     await encolar({ tipo: 'item', id: item.id, cambios: { nota } });
+    sincronizar();
+  }
+
+  /* Las respuestas de los demás tipos viajan por el mismo camino que el estado:
+   * al teléfono primero, a la cola después. La firma trae además un blob, que
+   * se guarda como adjunto de clase 'firma'. */
+  async function guardarRespuesta(item, respuesta) {
+    if (respuesta?.blob) {
+      const { blob, ...resto } = respuesta;
+      const firma = {
+        id: nuevoId(),
+        control_id: id,
+        control_item_id: item.id,
+        comunidad_id: control.comunidad_id,
+        clase: 'firma',
+        blob,
+        firmante_nombre: resto.firmante_nombre ?? null,
+        firmante_rut: resto.firmante_rut ?? null,
+        tomada_en: new Date().toISOString(),
+        orden: 0,
+        subida_por: perfil?.id ?? null,
+        pendiente: 1
+      };
+      await guardarFoto(firma);
+      setFotos(xs => [...xs.filter(f => !(f.control_item_id === item.id && f.clase === 'firma')), firma]);
+      await encolar({ tipo: 'foto', id: firma.id, control_id: id });
+      respuesta = resto;
+    }
+
+    const actualizado = { ...item, respuesta, pendiente: true };
+    setItems(xs => xs.map(x => (x.id === item.id ? actualizado : x)));
+    await guardarItem(actualizado);
+    await encolar({ tipo: 'item', id: item.id, cambios: { respuesta } });
     sincronizar();
   }
 
@@ -240,12 +275,22 @@ export default function Levantamiento() {
           texto: i.texto,
           estado: i.estado,
           nota: i.nota,
+          tipo_ingreso: i.tipo_ingreso,
+          config: i.config,
+          respuesta: i.respuesta,
           fotos: fotosDe(i.id).map(f => ({
             url: URL.createObjectURL(f.blob),
             descripcion: f.descripcion
           }))
         }))
-      }))
+      })),
+      firmas: fotos
+        .filter(f => f.clase === 'firma')
+        .map(f => ({
+          url: URL.createObjectURL(f.blob),
+          nombre: f.firmante_nombre,
+          rut: f.firmante_rut
+        }))
     });
     if (!imprimirInforme(html)) {
       setError('El navegador bloqueó la ventana del informe. Permite las ventanas emergentes para este sitio.');
@@ -357,6 +402,7 @@ export default function Levantamiento() {
                   cerrado={cerrado}
                   onMarcar={marcar}
                   onNota={guardarNota}
+                  onRespuesta={guardarRespuesta}
                   onFotos={agregarFotos}
                   onDescribir={describirFoto}
                   onQuitar={quitarFoto}
@@ -396,7 +442,7 @@ export default function Levantamiento() {
 }
 
 /* Un punto del levantamiento: estado, nota y fotos. */
-function Punto({ item, fotos, cerrado, onMarcar, onNota, onFotos, onDescribir, onQuitar }) {
+function Punto({ item, fotos, cerrado, onMarcar, onNota, onRespuesta, onFotos, onDescribir, onQuitar }) {
   const entrada = useRef(null);
   const necesitaNota = item.estado === 'observacion' || item.estado === 'critico';
 
@@ -404,19 +450,16 @@ function Punto({ item, fotos, cerrado, onMarcar, onNota, onFotos, onDescribir, o
     <article className="tarjeta punto">
       <p style={{ margin: '0 0 12px' }}>{item.texto}</p>
 
-      <div className="selector">
-        {ESTADOS.map(([valor, etiqueta]) => (
-          <button key={valor} type="button" className={valor}
-                  aria-pressed={item.estado === valor} disabled={cerrado}
-                  onClick={() => onMarcar(item, valor)}>
-            {etiqueta}
-          </button>
-        ))}
-      </div>
+      <CampoPunto
+        item={item}
+        cerrado={cerrado}
+        onEstado={valor => onMarcar(item, valor)}
+        onRespuesta={respuesta => onRespuesta(item, respuesta)}
+      />
 
       {/* La nota aparece solo cuando hay algo que explicar: un "conforme" no
           necesita justificación, una observación sí. */}
-      {necesitaNota && (
+      {item.tipo_ingreso === 'estado' && necesitaNota && (
         <div className="campo" style={{ marginTop: 12, marginBottom: 0 }}>
           <label className="etiqueta-campo" htmlFor={'nota-' + item.id}>Qué se observó</label>
           <textarea id={'nota-' + item.id} defaultValue={item.nota ?? ''}
@@ -446,7 +489,8 @@ function Punto({ item, fotos, cerrado, onMarcar, onNota, onFotos, onDescribir, o
             {/* `capture` abre la cámara directo en el teléfono en vez del
                 selector de archivos; `multiple` deja adjuntar varias del rollo
                 cuando ya se fotografió antes de abrir la app. */}
-            <input ref={entrada} type="file" accept="image/*" capture="environment"
+            <input ref={entrada} type="file" accept="image/*"
+                   {...(item.config?.origen === 'galeria' ? {} : { capture: 'environment' })}
                    multiple hidden
                    onChange={e => { onFotos(item, e.target.files); e.target.value = ''; }} />
             <button type="button" className="agregar-foto" onClick={() => entrada.current?.click()}>

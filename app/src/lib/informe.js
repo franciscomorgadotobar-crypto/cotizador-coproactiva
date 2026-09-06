@@ -58,14 +58,55 @@ function grillaFotos(fotos, columnas = 3) {
     </div>`;
 }
 
+/* Cada tipo de punto se lee distinto en papel. Una escala se entiende como
+ * "7 de 10"; un checklist, como la lista de lo que sí estaba. Mostrarlos todos
+ * como un estado de tres valores perdería justamente lo que se fue a medir. */
+function valorRespondido(item) {
+  const r = item.respuesta;
+  if (!r) return '';
+
+  switch (item.tipo_ingreso) {
+    case 'texto':
+      return r.texto ? `<p class="respuesta">${escapar(r.texto)}</p>` : '';
+    case 'numero':
+      return r.numero == null ? ''
+        : `<p class="respuesta lectura">${escapar(r.numero)}${
+            item.config?.unidad ? ` <span>${escapar(item.config.unidad)}</span>` : ''}</p>`;
+    case 'escala': {
+      if (r.valor == null) return '';
+      const max = item.config?.max ?? 10;
+      return `<p class="respuesta lectura">${escapar(r.valor)} <span>de ${max}</span></p>`;
+    }
+    case 'seleccion':
+      return r.opcion ? `<p class="respuesta">${escapar(r.opcion)}</p>` : '';
+    case 'checklist': {
+      const marcadas = r.opciones ?? [];
+      const todas = item.config?.opciones ?? marcadas;
+      if (!todas.length) return '';
+      // Se listan todas, no solo las marcadas: lo que faltó es tan informativo
+      // como lo que estaba.
+      return `<ul class="marcadas">${todas.map(op =>
+        `<li class="${marcadas.includes(op) ? 'si' : 'no'}">${escapar(op)}</li>`
+      ).join('')}</ul>`;
+    }
+    default:
+      return '';
+  }
+}
+
 function bloqueItem(item) {
+  // Solo los puntos de tipo estado llevan el sello de conforme/observación:
+  // en una lectura de medidor ese sello no significa nada.
+  const conEstado = !item.tipo_ingreso || item.tipo_ingreso === 'estado';
   const estado = ESTADOS[item.estado] ?? ESTADOS.sin_evaluar;
+
   return `
     <article class="item">
       <header>
         <h3>${escapar(item.texto)}</h3>
-        <span class="estado ${estado.clase}">${estado.etiqueta}</span>
+        ${conEstado ? `<span class="estado ${estado.clase}">${estado.etiqueta}</span>` : ''}
       </header>
+      ${valorRespondido(item)}
       ${item.nota ? `<p class="nota">${escapar(item.nota)}</p>` : ''}
       ${grillaFotos(item.fotos)}
     </article>`;
@@ -201,6 +242,35 @@ export function informeHtml(datos) {
     flex: none;
   }
 
+  .respuesta { margin: 0 0 2mm; font-size: 10pt; }
+  .respuesta.lectura {
+    font-family: 'Montserrat', sans-serif; font-size: 14pt; font-weight: 700;
+  }
+  .respuesta.lectura span { font-size: 9pt; font-weight: 400; color: var(--pizarra); }
+
+  .marcadas { margin: 0 0 2mm; padding: 0; list-style: none; font-size: 9.5pt; }
+  .marcadas li { padding-left: 5mm; position: relative; line-height: 1.6; }
+  .marcadas li::before {
+    position: absolute; left: 0; font-weight: 700;
+  }
+  .marcadas .si::before { content: '✓'; color: #38603f; }
+  .marcadas .no { color: var(--pizarra); }
+  .marcadas .no::before { content: '—'; color: var(--niebla); }
+
+  /* Las firmas van al pie, no en la grilla: son la constancia de quién recibió
+     el levantamiento, no evidencia de lo levantado. */
+  .firmas { display: flex; gap: 10mm; margin-top: 12mm; break-inside: avoid; }
+  .firmas figure { margin: 0; flex: 1; max-width: 70mm; }
+  .firmas img {
+    width: 100%; height: 22mm; object-fit: contain;
+    border-bottom: 1px solid var(--tinta);
+  }
+  .firmas figcaption { margin-top: 2mm; font-size: 8.5pt; }
+  .firmas .rol {
+    display: block; font-size: 7pt; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--pizarra); margin-top: 1mm;
+  }
+
   .pie {
     margin-top: 10mm; padding-top: 4mm; border-top: 1px solid var(--niebla);
     font-size: 8pt; color: var(--pizarra);
@@ -238,6 +308,19 @@ export function informeHtml(datos) {
   </div>
 
   ${categorias.map(bloqueCategoria).join('')}
+
+  ${(datos.firmas ?? []).length ? `
+  <div class="firmas">
+    ${datos.firmas.map(f => `
+      <figure>
+        <img src="${escapar(f.url)}" alt="Firma">
+        <figcaption>
+          ${escapar(f.nombre || 'Sin nombre')}
+          ${f.rut ? `<br>${escapar(f.rut)}` : ''}
+          <span class="rol">Recibe conforme</span>
+        </figcaption>
+      </figure>`).join('')}
+  </div>` : ''}
 
   <div class="pie">
     ${control.checkin_en

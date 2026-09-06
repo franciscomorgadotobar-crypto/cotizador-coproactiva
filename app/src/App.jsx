@@ -1,8 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSesion } from './lib/sesion';
 import Ingreso from './paginas/Ingreso';
-import InicioTerreno from './paginas/terreno/Inicio';
-import Control from './paginas/terreno/Control';
+import Inicio from './paginas/panel/Inicio';
+import Plantillas from './paginas/panel/Plantillas';
+import EditorPlantilla from './paginas/panel/Plantilla';
+import Levantamiento from './paginas/terreno/Control';
 
 function Privada({ children }) {
   const { sesion, perfil, cargando } = useSesion();
@@ -26,8 +28,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/ingreso" element={sesion ? <Navigate to="/" replace /> : <Ingreso />} />
-      <Route path="/" element={<Privada><InicioTerreno /></Privada>} />
-      <Route path="/control/:id" element={<Privada><Control /></Privada>} />
+      <Route path="/" element={<Privada><Inicio /></Privada>} />
+      <Route path="/plantillas" element={<Privada><Plantillas /></Privada>} />
+      <Route path="/plantillas/:id" element={<Privada><EditorPlantilla /></Privada>} />
+      <Route path="/control/:id" element={<Privada><Levantamiento /></Privada>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
