@@ -9,6 +9,7 @@ import { leerControles, guardarControl } from '../../lib/local';
 const CHIP = {
   pendiente: ['chip-pendiente', 'Pendiente'],
   en_curso: ['chip-alerta', 'En curso'],
+  pausado: ['chip-pausado', 'En pausa'],
   enviado: ['chip-cumple', 'Enviado'],
   anulado: ['chip-pendiente', 'Anulado']
 };
@@ -60,7 +61,9 @@ export default function Inicio() {
 
     return {
       pendientes: controles.filter(c => c.estado === 'pendiente').length,
-      enCurso:    controles.filter(c => c.estado === 'en_curso').length,
+      // Los pausados cuentan como trabajo abierto: quedaron a medias y alguien
+      // tiene que volver.
+      enCurso:    controles.filter(c => c.estado === 'en_curso' || c.estado === 'pausado').length,
       enviados:   recientes.filter(c => c.estado === 'enviado').length,
       criticos:   controles.reduce((n, c) => n + (c.items_criticos ?? 0), 0)
     };

@@ -271,6 +271,20 @@ export function informeHtml(datos) {
     text-transform: uppercase; color: var(--pizarra); margin-top: 1mm;
   }
 
+  /* Las interrupciones se declaran. Un informe que oculta que la revisión tomó
+     tres visitas en dos semanas está afirmando algo que no ocurrió. */
+  .pausas {
+    margin-top: 8mm; padding: 4mm; background: var(--papel);
+    border-left: 3px solid var(--niebla); break-inside: avoid;
+  }
+  .pausas .titulo {
+    margin: 0 0 2mm; font-size: 7.5pt; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--pizarra); font-weight: 600;
+  }
+  .pausas ul { margin: 0; padding-left: 4mm; font-size: 9pt; }
+  .pausas li { margin-bottom: 1mm; }
+  .pausas .reanuda { display: block; color: var(--pizarra); font-size: 8pt; }
+
   .pie {
     margin-top: 10mm; padding-top: 4mm; border-top: 1px solid var(--niebla);
     font-size: 8pt; color: var(--pizarra);
@@ -320,6 +334,19 @@ export function informeHtml(datos) {
           <span class="rol">Recibe conforme</span>
         </figcaption>
       </figure>`).join('')}
+  </div>` : ''}
+
+  ${(datos.pausas ?? []).length ? `
+  <div class="pausas">
+    <p class="titulo">El levantamiento se interrumpió ${datos.pausas.length} ${
+      datos.pausas.length === 1 ? 'vez' : 'veces'}</p>
+    <ul>
+      ${datos.pausas.map(p => `
+        <li>
+          ${fecha(p.pausado_en, true)}${p.motivo ? ` — ${escapar(p.motivo)}` : ''}
+          ${p.reanudado_en ? `<span class="reanuda">Reanudado el ${fecha(p.reanudado_en, true)}</span>` : ''}
+        </li>`).join('')}
+    </ul>
   </div>` : ''}
 
   <div class="pie">

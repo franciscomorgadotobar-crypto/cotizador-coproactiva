@@ -29,6 +29,7 @@ export default function Levantamiento() {
   const [ubicando, setUbicando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [abierta, setAbierta] = useState(null);   // categoría desplegada
+  const [pausas, setPausas] = useState([]);
 
   /* Primero el teléfono, después el servidor. Al revés, entrar a un
    * levantamiento en un subterráneo mostraría una pantalla vacía mientras la
@@ -50,7 +51,7 @@ export default function Levantamiento() {
         return;
       }
 
-      const [rc, ri] = await Promise.all([
+      const [rc, ri, rp] = await Promise.all([
         supabase
           .from('controles')
           .select('id, comunidad_id, estado, periodo, checkin_en, checkin_precision, creado_en, comunidades(nombre, direccion, comuna)')
@@ -60,9 +61,15 @@ export default function Levantamiento() {
           .from('control_items')
           .select('id, grupo, texto, orden, estado, nota, respuesta, tipo_ingreso, config, plantilla_item_id')
           .eq('control_id', id)
-          .order('orden')
+          .order('orden'),
+        supabase
+          .from('control_pausas')
+          .select('*')
+          .eq('control_id', id)
+          .order('pausado_en', { ascending: false })
       ]);
       if (!vigente) return;
+      if (rp.data) setPausas(rp.data);
 
       if (rc.error) { if (!c) setError(rc.error.message); return; }
       if (!rc.data) { if (!c) setError('Este levantamiento no existe o no tienes acceso.'); return; }
@@ -142,6 +149,50 @@ export default function Levantamiento() {
       // vuelva eterna; una posición de red imprecisa sirve más que ninguna.
       { enableHighAccuracy: true, timeout: 25000, maximumAge: 0 }
     );
+  }
+
+  // ----------------------------------------------------------- Pausar
+
+  /* Pausar deja el levantamiento donde está y registra por qué. Lo evaluado no
+   * se toca: al volver, el recorrido sigue desde donde iba. El motivo no es
+   * burocracia — tres levantamientos pausados porque nadie tenía la llave del
+   * subterráneo son un hallazgo de la administración. */
+  async function pausar(motivo) {
+    const pos = await posicionActual();
+    const fila = {
+      id: nuevoId(),
+      control_id: id,
+      pausado_en: new Date().toISOString(),
+      pausado_por: perfil?.id ?? null,
+      motivo: motivo?.trim() || null,
+      lat: pos?.lat ?? null,
+      lng: pos?.lng ?? null,
+      reanudado_en: null
+    };
+
+    const actualizado = { ...control, estado: 'pausado' };
+    setControl(actualizado);
+    setPausas(xs => [fila, ...xs]);
+    await guardarControl(actualizado);
+    await encolar({ tipo: 'pausa', fila });
+    await encolar({ tipo: 'control', id, cambios: { estado: 'pausado' } });
+    sincronizar();
+    navegar('/');
+  }
+
+  async function reanudar() {
+    const abiertaAhora = pausas.find(p => !p.reanudado_en);
+    const actualizado = { ...control, estado: 'en_curso' };
+    setControl(actualizado);
+    await guardarControl(actualizado);
+
+    if (abiertaAhora) {
+      const cerrada = { ...abiertaAhora, reanudado_en: new Date().toISOString() };
+      setPausas(xs => xs.map(p => (p.id === cerrada.id ? cerrada : p)));
+      await encolar({ tipo: 'pausa', fila: cerrada });
+    }
+    await encolar({ tipo: 'control', id, cambios: { estado: 'en_curso' } });
+    sincronizar();
   }
 
   // ----------------------------------------------------- Evaluar y anotar
@@ -284,6 +335,11 @@ export default function Levantamiento() {
           }))
         }))
       })),
+      pausas: pausas.map(p => ({
+        pausado_en: p.pausado_en,
+        reanudado_en: p.reanudado_en,
+        motivo: p.motivo
+      })),
       firmas: fotos
         .filter(f => f.clase === 'firma')
         .map(f => ({
@@ -356,6 +412,19 @@ export default function Levantamiento() {
           </button>
         )}
 
+        {control.estado === 'pausado' && (
+          <div className="aviso" style={{ marginBottom: 10 }}>
+            <p style={{ margin: 0 }}>
+              Levantamiento en pausa
+              {pausas[0]?.motivo ? `: ${pausas[0].motivo}` : '.'}
+            </p>
+            <button className="boton boton-texto" style={{ padding: '6px 0 0' }}
+                    onClick={reanudar}>
+              Reanudar
+            </button>
+          </div>
+        )}
+
         {items.length > 0 && (
           <>
             <div className="fila" style={{ marginBottom: 5 }}>
@@ -422,8 +491,16 @@ export default function Levantamiento() {
 
       {!cerrado && items.length > 0 && (
         <footer className="pie-fijo">
-          <button className="boton boton-secundario boton-movil crece" onClick={() => navegar('/')}>
-            Guardar borrador
+          <button className="boton boton-secundario boton-movil crece"
+                  onClick={() => {
+                    const motivo = prompt(
+                      'Motivo de la pausa (opcional)\n\nPor ejemplo: sin acceso a sala de máquinas, ' +
+                      'fin de turno, conserje no disponible.'
+                    );
+                    // Cancelar el diálogo no pausa; dejarlo vacío sí.
+                    if (motivo !== null) pausar(motivo);
+                  }}>
+            Pausar
           </button>
           <button className="boton boton-movil crece"
                   onClick={enviar}

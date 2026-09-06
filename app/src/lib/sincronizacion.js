@@ -120,6 +120,14 @@ async function aplicar(entrada) {
       if (error) throw error;
       return;
     }
+    case 'pausa': {
+      // upsert y no insert: la pausa nace en el teléfono con su id, y al
+      // reanudar se actualiza esa misma fila. Si la creación no había subido
+      // todavía, el upsert la crea ya reanudada, que es el estado correcto.
+      const { error } = await supabase.from('control_pausas').upsert(entrada.fila);
+      if (error) throw error;
+      return;
+    }
     case 'foto': {
       const fotos = await leerFotosDeControl(entrada.control_id);
       const foto = fotos.find(f => f.id === entrada.id);
