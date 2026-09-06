@@ -253,3 +253,126 @@ a:hover { color: var(--pizarra); }
   color: var(--texto-tenue);
   font-size: 13.5px;
 }
+
+/* --------------------------------------------------------- Barra de conexión */
+
+/* Solo aparece cuando hay algo que decir. En una pantalla de teléfono, un
+   indicador permanente de "conectado" gasta espacio sin informar nada. */
+.barra-conexion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  background: var(--alerta-fondo);
+  border-bottom: 1px solid var(--alerta-borde);
+  color: var(--alerta-texto);
+  font: 600 11px/1.3 var(--fuente-display);
+  letter-spacing: 0.06em;
+}
+.barra-conexion.sin-senal {
+  background: var(--info-fondo, var(--niebla));
+  border-bottom-color: var(--borde);
+  color: var(--texto-apagado);
+}
+.barra-conexion .boton-texto { padding: 0; white-space: nowrap; }
+
+/* --------------------------------------------------------------- Categorías */
+
+.categoria { margin-bottom: 12px; }
+
+/* Plegadas por defecto: con treinta puntos, una lista corrida obliga a
+   desplazarse a ciegas buscando dónde se quedó uno. */
+.categoria-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: var(--tactil);
+  padding: 12px 14px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  font: 600 11px/1.2 var(--fuente-display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--texto-titulo);
+  text-align: left;
+  cursor: pointer;
+}
+.categoria-titulo.abierta { border-color: var(--naranja); }
+.categoria-titulo .flecha { font-size: 15px; color: var(--texto-tenue); width: 12px; text-align: center; }
+.categoria-titulo .micro { color: var(--texto-tenue); }
+
+.punto-critico {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--critico-texto); flex: none;
+}
+
+.punto { padding: 14px; margin-top: 8px; }
+
+/* -------------------------------------------------------------------- Fotos */
+
+/* Tres columnas en el teléfono, igual que en el informe: lo que se ve al
+   fotografiar es lo que va a salir impreso. */
+.fotos-punto {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+.fotos-punto figure { position: relative; margin: 0; }
+.fotos-punto img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  display: block;
+  background: var(--niebla);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+}
+.fotos-punto input[type='text'] {
+  width: 100%;
+  margin-top: 4px;
+  padding: 5px 6px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  background: var(--tarjeta);
+  font: 400 11px/1.3 var(--fuente-cuerpo);
+  color: var(--texto-cuerpo);
+}
+
+/* Marca discreta de "ya está arriba". Su ausencia es la información útil:
+   mientras no aparezca, esa foto vive solo en este teléfono. */
+.fotos-punto .subida {
+  position: absolute; top: 5px; left: 5px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ok-texto);
+  box-shadow: 0 0 0 2px var(--tarjeta);
+}
+.fotos-punto .quitar {
+  position: absolute; top: 3px; right: 3px;
+  width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 50%;
+  background: rgba(43, 49, 56, 0.82);
+  color: #fff; font-size: 15px; line-height: 1;
+  cursor: pointer;
+}
+
+.agregar-foto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  aspect-ratio: 4 / 3;
+  border: 1px dashed var(--borde);
+  border-radius: var(--radio-control);
+  background: transparent;
+  color: var(--texto-tenue);
+  font: 600 9.5px/1 var(--fuente-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.agregar-foto span { font-size: 19px; line-height: 1; }

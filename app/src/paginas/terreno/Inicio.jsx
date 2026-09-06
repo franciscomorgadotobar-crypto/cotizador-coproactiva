@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSesion } from '../../lib/sesion';
+import { AvisoConexion } from '../../lib/estado';
+import { hayConexion } from '../../lib/sincronizacion';
+import { leerControles, guardarControl } from '../../lib/local';
 
 const CHIP = {
   pendiente: ['chip-pendiente', 'Pendiente'],
@@ -18,6 +21,14 @@ export default function InicioTerreno() {
   useEffect(() => {
     let vigente = true;
 
+    // Sin señal se muestra lo que el teléfono ya tiene descargado: llegar a un
+    // edificio y ver una lista vacía porque no hay red haría la app inútil
+    // justo cuando se necesita.
+    if (!hayConexion()) {
+      leerControles().then(locales => vigente && setControles(locales));
+      return () => { vigente = false; };
+    }
+
     // La vista trae el avance calculado (12 de 28) en vez de contar en el
     // cliente. RLS ya limita a las comunidades del usuario, así que no hace
     // falta filtrar por comunidad acá.
@@ -27,8 +38,14 @@ export default function InicioTerreno() {
       .order('programado_para', { ascending: true })
       .then(({ data, error }) => {
         if (!vigente) return;
-        if (error) setError(error.message);
-        else setControles(data ?? []);
+        if (error) {
+          setError(error.message);
+          leerControles().then(locales => vigente && setControles(locales));
+        } else {
+          setControles(data ?? []);
+          // Se guardan para poder abrirlos después sin señal.
+          for (const c of data ?? []) guardarControl(c);
+        }
       });
 
     return () => { vigente = false; };
@@ -40,6 +57,8 @@ export default function InicioTerreno() {
 
   return (
     <div className="pantalla">
+      <AvisoConexion />
+
       <header className="encabezado">
         <div className="fila">
           <div className="crece">
@@ -54,7 +73,7 @@ export default function InicioTerreno() {
 
       <div className="cuerpo">
         <div className="grupo-titulo">
-          <span className="etiqueta-grupo">Mis controles</span>
+          <span className="etiqueta-grupo">Mis levantamientos</span>
         </div>
 
         {error && <div className="aviso aviso-critico">{error}</div>}
@@ -62,7 +81,7 @@ export default function InicioTerreno() {
         {controles === null && !error && <p className="cargando">Cargando…</p>}
 
         {controles?.length === 0 && (
-          <p className="vacio">No tienes controles asignados por ahora.</p>
+          <p className="vacio">No tienes levantamientos asignados por ahora.</p>
         )}
 
         {controles?.map(c => {
