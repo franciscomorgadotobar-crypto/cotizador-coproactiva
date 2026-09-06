@@ -254,38 +254,66 @@ export default function Levantamiento() {
 
   // ---------------------------------------------------------------- Fotos
 
+  /* `archivos` llega ya copiado a un array por quien llama. La FileList de un
+   * <input type=file> es una vista viva: al limpiar el input para poder volver
+   * a fotografiar lo mismo, la lista se vacía, y cualquier lectura posterior no
+   * encuentra nada. Copiarla antes de tocar el input es obligatorio.
+   *
+   * La foto se guarda de inmediato y las coordenadas se agregan después. Al
+   * revés —esperando primero al GPS— la interfaz queda muda varios segundos
+   * después de disparar la cámara, y da la impresión de que no guardó. */
   async function agregarFotos(item, archivos) {
+    if (!archivos.length) return;
     const yaHay = fotosDe(item.id).length;
-    const pos = await posicionActual();
+    const nuevas = [];
 
-    for (const [n, archivo] of [...archivos].entries()) {
+    for (const [n, archivo] of archivos.entries()) {
+      let blob;
       try {
-        const { blob } = await comprimir(archivo);
-        const foto = {
-          id: nuevoId(),
-          control_id: id,
-          control_item_id: item.id,
-          comunidad_id: control.comunidad_id,
-          blob,
-          nombre_original: archivo.name,
-          lat: pos?.lat ?? null,
-          lng: pos?.lng ?? null,
-          // La hora de captura la pone el teléfono: los metadatos EXIF se
-          // pierden al recomprimir, así que el dato se guarda aparte.
-          tomada_en: new Date().toISOString(),
-          descripcion: '',
-          orden: yaHay + n,
-          subida_por: perfil?.id ?? null,
-          pendiente: 1
-        };
-        await guardarFoto(foto);
-        setFotos(xs => [...xs, foto]);
-        await encolar({ tipo: 'foto', id: foto.id, control_id: id });
+        ({ blob } = await comprimir(archivo));
       } catch (e) {
-        setError('No se pudo procesar una de las fotos: ' + e.message);
+        /* Algunos teléfonos entregan HEIC, que el navegador no siempre sabe
+         * decodificar. Antes que perder la foto, se guarda el original tal
+         * cual: pesa más, pero es la evidencia y no puede perderse. */
+        console.warn('No se pudo comprimir, se guarda el original', e);
+        blob = archivo;
       }
+
+      const foto = {
+        id: nuevoId(),
+        control_id: id,
+        control_item_id: item.id,
+        comunidad_id: control.comunidad_id,
+        clase: 'foto',
+        blob,
+        nombre_original: archivo.name,
+        lat: null,
+        lng: null,
+        // La hora de captura la pone el teléfono: los metadatos EXIF se
+        // pierden al recomprimir, así que el dato se guarda aparte.
+        tomada_en: new Date().toISOString(),
+        descripcion: '',
+        orden: yaHay + n,
+        subida_por: perfil?.id ?? null,
+        pendiente: 1
+      };
+
+      await guardarFoto(foto);
+      nuevas.push(foto);
+      setFotos(xs => [...xs, foto]);
+      await encolar({ tipo: 'foto', id: foto.id, control_id: id });
     }
+
     sincronizar();
+
+    // Las coordenadas llegan cuando lleguen y se agregan a lo ya guardado.
+    const pos = await posicionActual();
+    if (!pos) return;
+    for (const foto of nuevas) {
+      const conPos = { ...foto, lat: pos.lat, lng: pos.lng };
+      await guardarFoto(conPos);
+      setFotos(xs => xs.map(f => (f.id === foto.id ? conPos : f)));
+    }
   }
 
   async function describirFoto(foto, descripcion) {
@@ -569,7 +597,13 @@ function Punto({ item, fotos, cerrado, onMarcar, onNota, onRespuesta, onFotos, o
             <input ref={entrada} type="file" accept="image/*"
                    {...(item.config?.origen === 'galeria' ? {} : { capture: 'environment' })}
                    multiple hidden
-                   onChange={e => { onFotos(item, e.target.files); e.target.value = ''; }} />
+                   onChange={e => {
+                     // Se copia antes de limpiar el input: la FileList es una
+                     // vista viva y al vaciar el campo se pierde el contenido.
+                     const archivos = Array.from(e.target.files);
+                     e.target.value = '';
+                     onFotos(item, archivos);
+                   }} />
             <button type="button" className="agregar-foto" onClick={() => entrada.current?.click()}>
               <span aria-hidden="true">＋</span>
               Foto

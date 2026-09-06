@@ -33,7 +33,7 @@ export default function Inicio() {
 
     supabase
       .from('controles_con_avance')
-      .select('id, estado, periodo, programado_para, enviado_en, checkin_en, items_evaluados, items_totales, items_criticos, comunidades(nombre, direccion, comuna)')
+      .select('id, comunidad_id, estado, periodo, programado_para, enviado_en, checkin_en, items_evaluados, items_totales, items_criticos, comunidades(nombre, direccion, comuna)')
       .order('programado_para', { ascending: true })
       .then(({ data, error }) => {
         if (!vigente) return;

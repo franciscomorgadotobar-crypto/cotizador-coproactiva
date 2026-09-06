@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import {
   ALMACENES, leerCola, sacarDeCola, marcarIntento,
-  guardarFoto, leerFotosDeControl, pendientes
+  guardarFoto, leerFotosDeControl, confirmarItem, pendientes
 } from './local';
 
 /* Subida de lo que se registró sin señal.
@@ -110,6 +110,8 @@ async function aplicar(entrada) {
         .update(entrada.cambios)
         .eq('id', entrada.id);
       if (error) throw error;
+      // Confirmado en el servidor: la copia local deja de tener precedencia.
+      await confirmarItem(entrada.id);
       return;
     }
     case 'control': {

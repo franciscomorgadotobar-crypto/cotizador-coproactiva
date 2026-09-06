@@ -116,6 +116,16 @@ export async function guardarItem(item) {
   return (await base()).put(ALMACENES.items, item);
 }
 
+/* Un ítem queda marcado `pendiente` mientras su cambio no haya subido, y esa
+ * marca hace que `fusionarItems` prefiera la copia del teléfono. Si no se
+ * limpia al confirmarse la subida, la marca queda para siempre: el teléfono
+ * ignoraría cualquier corrección que jefatura hiciera después sobre ese ítem. */
+export async function confirmarItem(id) {
+  const db = await base();
+  const item = await db.get(ALMACENES.items, id);
+  if (item?.pendiente) await db.put(ALMACENES.items, { ...item, pendiente: false });
+}
+
 export async function guardarFoto(foto) {
   return (await base()).put(ALMACENES.fotos, foto);
 }
