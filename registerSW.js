@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/cotizador-coproactiva/sw.js', { scope: '/cotizador-coproactiva/' })})}
