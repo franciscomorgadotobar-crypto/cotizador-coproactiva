@@ -26,20 +26,24 @@ ingreso, en vez de quedar en blanco.
 
 ## Desplegar en Netlify
 
-El sitio ya existe: **coproactiva-app**
+El sitio es **coproactiva-app**
 (`https://app.netlify.com/projects/coproactiva-app`), distinto del sitio del
-generador de propuestas. Las variables `VITE_SUPABASE_URL` y
-`VITE_SUPABASE_ANON_KEY` ya están cargadas.
-
-Falta enlazarlo al repositorio, que es lo único que la API de Netlify no permite
-hacer desde fuera:
-
-1. *Project configuration → Build & deploy → Link repository* → este repositorio.
-2. **Base directory:** `app`
-3. Build y publish los toma de `app/netlify.toml` (`npm run build` → `dist`).
+generador de propuestas. Está enlazado a este repositorio con **base directory
+`app`**; el build y el publish los toma de `app/netlify.toml`
+(`npm run build` → `dist`).
 
 El redirect `/*` → `/index.html` ya está configurado: sin él, entrar directo a
 `/control/<id>` daría 404.
+
+### Dos cosas que cuestan un deploy si no se saben
+
+**Enlazar el repositorio borra las variables de entorno.** Si las cargas antes de
+enlazar, desaparecen. Hay que cargarlas después y volver a desplegar.
+
+**Vite incrusta las variables al compilar, no al cargar la página.** Cambiar una
+variable en Netlify no cambia el sitio publicado: hay que reconstruir. Si la app
+muestra "Falta configurar la conexión con Supabase" después de haberlas cargado,
+es que el build es anterior a las variables.
 
 ## Qué hay construido
 
