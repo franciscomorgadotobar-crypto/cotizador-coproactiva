@@ -33,7 +33,7 @@ export default function Inicio() {
 
     supabase
       .from('controles_con_avance')
-      .select('id, comunidad_id, estado, periodo, programado_para, enviado_en, checkin_en, items_evaluados, items_totales, items_criticos, comunidades(nombre, direccion, comuna)')
+      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, checkin_en, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
       .order('programado_para', { ascending: true })
       .then(({ data, error }) => {
         if (!vigente) return;
@@ -118,10 +118,16 @@ export default function Inicio() {
         )}
 
         {puedeConfigurar && (
-          <Link to="/plantillas" className="acceso">
-            <span className="crece">Plantillas de levantamiento</span>
-            <span aria-hidden="true">›</span>
-          </Link>
+          <>
+            <Link to="/nuevo" className="acceso acceso-principal">
+              <span className="crece">Nuevo levantamiento</span>
+              <span aria-hidden="true">+</span>
+            </Link>
+            <Link to="/plantillas" className="acceso">
+              <span className="crece">Plantillas</span>
+              <span aria-hidden="true">›</span>
+            </Link>
+          </>
         )}
 
         <div className="grupo-titulo">
@@ -132,14 +138,14 @@ export default function Inicio() {
         {controles && abiertos.length === 0 && (
           <p className="vacio">No tienes levantamientos pendientes.</p>
         )}
-        {abiertos.map(c => <Tarjeta key={c.id} c={c} />)}
+        {abiertos.map(c => <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />)}
 
         {cerrados.length > 0 && (
           <>
             <div className="grupo-titulo" style={{ marginTop: 20 }}>
               <span className="etiqueta-grupo">Realizados</span>
             </div>
-            {cerrados.map(c => <Tarjeta key={c.id} c={c} />)}
+            {cerrados.map(c => <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />)}
           </>
         )}
       </div>
@@ -147,13 +153,12 @@ export default function Inicio() {
   );
 }
 
-function Tarjeta({ c }) {
+function Tarjeta({ c, puedeEditar }) {
   const [clase, texto] = CHIP[c.estado] ?? CHIP.pendiente;
   const pct = c.items_totales ? Math.round((c.items_evaluados / c.items_totales) * 100) : 0;
 
   return (
-    <Link to={`/control/${c.id}`} className="tarjeta"
-          style={{ display: 'block', padding: 16, marginBottom: 12, color: 'inherit' }}>
+    <article className="tarjeta" style={{ padding: 16, marginBottom: 12 }}>
       <div className="fila" style={{ marginBottom: 8 }}>
         <span className="etiqueta-campo crece" style={{ margin: 0 }}>
           {c.enviado_en
@@ -162,16 +167,30 @@ function Tarjeta({ c }) {
               ? new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
               : c.periodo ?? ''}
         </span>
+        {c.destino_tipo === 'prospecto' && (
+          <span className="chip chip-diagnostico">Diagnóstico</span>
+        )}
         {c.items_criticos > 0 && (
           <span className="chip chip-critico">{c.items_criticos} crítico{c.items_criticos > 1 ? 's' : ''}</span>
         )}
         <span className={'chip ' + clase}>{texto}</span>
       </div>
 
-      <p className="dato-chico" style={{ margin: 0 }}>{c.comunidades?.nombre}</p>
-      <p className="micro" style={{ margin: '3px 0 0' }}>
-        {[c.comunidades?.direccion, c.comunidades?.comuna].filter(Boolean).join(', ')}
-      </p>
+      <div className="fila" style={{ alignItems: 'flex-start' }}>
+        <Link to={`/control/${c.id}`} className="crece" style={{ color: 'inherit' }}>
+          <p className="dato-chico" style={{ margin: 0 }}>
+            {c.destino_nombre ?? c.comunidades?.nombre}
+          </p>
+          <p className="micro" style={{ margin: '3px 0 0' }}>
+            {[c.destino_direccion, c.destino_comuna].filter(Boolean).join(', ')}
+          </p>
+        </Link>
+        {puedeEditar && (
+          <Link to={`/control/${c.id}/editar`} className="editar" aria-label="Editar levantamiento">
+            Editar
+          </Link>
+        )}
+      </div>
 
       {c.items_totales > 0 && (
         <div style={{ marginTop: 12 }}>
@@ -186,6 +205,6 @@ function Tarjeta({ c }) {
           <div className="barra"><div style={{ width: pct + '%' }} /></div>
         </div>
       )}
-    </Link>
+    </article>
   );
 }

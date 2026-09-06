@@ -562,3 +562,30 @@ a:hover { color: var(--pizarra); }
   border-color: var(--borde);
   color: var(--texto-apagado);
 }
+
+/* Un levantamiento de diagnóstico no es una visita a un cliente: es la previa a
+   una propuesta, y conviene distinguirlo de un vistazo. */
+.chip-diagnostico {
+  background: var(--info-fondo, var(--niebla));
+  border-color: var(--borde);
+  color: var(--texto-apagado);
+}
+
+.acceso-principal {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--texto-inverso);
+  margin-bottom: 8px;
+}
+
+.editar {
+  flex: none;
+  padding: 4px 8px;
+  font: 600 9.5px/1 var(--fuente-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+  text-decoration: none;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+}

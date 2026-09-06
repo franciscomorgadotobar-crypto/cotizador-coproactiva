@@ -21,9 +21,16 @@ const PERFIL = {
 const COMUNIDAD_ID = 'c0000000-0000-4000-8000-000000000001';
 const CONTROL_ID   = 'c0000000-0000-4000-8000-000000000002';
 
+const PROSPECTO_ID = 'c0000000-0000-4000-8000-000000000003';
+
 const CONTROL = {
   id: CONTROL_ID,
   comunidad_id: COMUNIDAD_ID,
+  prospecto_id: null,
+  destino_nombre: 'Edificio de prueba',
+  destino_direccion: 'América 755',
+  destino_comuna: 'San Bernardo',
+  destino_tipo: 'comunidad',
   estado: 'en_curso',
   periodo: 'Septiembre 2026',
   checkin_en: '2026-09-06T13:14:00.000Z',
@@ -50,12 +57,17 @@ const ITEMS = [
 
 const TABLAS = {
   perfiles: [PERFIL],
+  comunidades: [{ id: COMUNIDAD_ID, nombre: 'Edificio de prueba', comuna: 'San Bernardo' }],
+  prospectos: [{ id: PROSPECTO_ID, nombre_condominio: 'Las Palmeras', comuna: 'Providencia', etapa: 'diagnostico' }],
   controles: [CONTROL],
   controles_con_avance: [CONTROL],
   control_items: ITEMS,
   control_pausas: [],
-  plantillas_control: [],
-  plantilla_items: [],
+  plantillas_control: [{ id: 'pl1', nombre: 'Control mensual', activa: true, plantilla_items: [{ count: 4 }] }],
+  plantilla_items: ITEMS.map((it, n) => ({
+    id: 'p' + n, plantilla_id: 'pl1', grupo: it.grupo, texto: it.texto,
+    orden: n, orden_grupo: 0, tipo_ingreso: it.tipo_ingreso, config: it.config, activo: true
+  })),
   adjuntos: []
 };
 
@@ -66,8 +78,14 @@ function consulta(tabla) {
   const api = {
     select: () => api,
     eq: () => api,
+    not: () => api,
     order: () => api,
-    insert: d => { registrar('insert', tabla, d); return api; },
+    insert: d => {
+      registrar('insert', tabla, d);
+      const fila = Array.isArray(d) ? d[0] : d;
+      filas.unshift({ id: 'nuevo-' + tabla, ...fila });
+      return api;
+    },
     update: d => { registrar('update', tabla, d); return api; },
     upsert: d => { registrar('upsert', tabla, d); return api; },
     delete: () => api,
@@ -107,4 +125,4 @@ export const supabase = {
   }
 };
 
-export const IDS = { COMUNIDAD_ID, CONTROL_ID, PERFIL };
+export const IDS = { COMUNIDAD_ID, CONTROL_ID, PROSPECTO_ID, PERFIL };

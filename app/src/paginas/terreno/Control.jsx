@@ -53,8 +53,8 @@ export default function Levantamiento() {
 
       const [rc, ri, rp] = await Promise.all([
         supabase
-          .from('controles')
-          .select('id, comunidad_id, estado, periodo, checkin_en, checkin_precision, creado_en, comunidades(nombre, direccion, comuna)')
+          .from('controles_con_avance')
+          .select('id, comunidad_id, prospecto_id, estado, periodo, checkin_en, checkin_precision, creado_en, reabierto_en, motivo_reapertura, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
           .eq('id', id)
           .maybeSingle(),
         supabase
@@ -345,7 +345,11 @@ export default function Levantamiento() {
 
   function verInforme() {
     const html = informeHtml({
-      comunidad: control.comunidades ?? { nombre: 'Comunidad' },
+      comunidad: {
+        nombre: control.destino_nombre ?? 'Sin identificar',
+        direccion: control.destino_direccion,
+        comuna: control.destino_comuna
+      },
       control: { ...control, responsable: perfil?.nombre },
       logo: import.meta.env.BASE_URL + 'logo-coproactiva.svg',
       categorias: categorias.map(c => ({
@@ -423,9 +427,10 @@ export default function Levantamiento() {
           {control.periodo && <span className="micro">{control.periodo}</span>}
         </div>
 
-        <h1 className="h3">{control.comunidades?.nombre}</h1>
+        <h1 className="h3">{control.destino_nombre ?? control.comunidades?.nombre}</h1>
         <p className="chico apagado" style={{ margin: '3px 0 10px' }}>
-          {[control.comunidades?.direccion, control.comunidades?.comuna].filter(Boolean).join(', ')}
+          {[control.destino_direccion, control.destino_comuna].filter(Boolean).join(', ')}
+          {control.destino_tipo === 'prospecto' && ' · Diagnóstico comercial'}
         </p>
 
         {control.checkin_en ? (

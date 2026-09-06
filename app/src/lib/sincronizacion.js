@@ -64,7 +64,9 @@ async function subirFoto(foto) {
   // JPEG. Subir una firma declarándola JPEG la deja ilegible en el informe.
   const esFirma = foto.clase === 'firma';
   const mime = esFirma ? 'image/png' : 'image/jpeg';
-  const ruta = `${foto.comunidad_id}/${foto.control_id}/${foto.id}.${esFirma ? 'png' : 'jpg'}`;
+  /* La ruta cuelga del levantamiento, no de la comunidad: un levantamiento de
+   * diagnóstico pertenece a un prospecto y no tiene comunidad todavía. */
+  const ruta = `${foto.control_id}/${foto.id}.${esFirma ? 'png' : 'jpg'}`;
 
   const { error: errorSubida } = await supabase.storage
     .from('evidencia')
@@ -78,7 +80,7 @@ async function subirFoto(foto) {
 
   const { error: errorFila } = await supabase.from('adjuntos').upsert({
     id: foto.id,
-    comunidad_id: foto.comunidad_id,
+    comunidad_id: foto.comunidad_id ?? null,
     control_id: foto.control_id,
     control_item_id: foto.control_item_id,
     storage_path: ruta,
