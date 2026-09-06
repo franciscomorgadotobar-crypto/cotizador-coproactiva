@@ -10,7 +10,16 @@ Esquema de Supabase (PostgreSQL) para la app de administración de comunidades.
 | `migrations/0002_crm.sql` | Leads, prospectos e historial del embudo comercial |
 | `migrations/0003_terreno.sql` | Plantillas de checklist, controles, hallazgos, órdenes de trabajo y adjuntos |
 | `migrations/0004_rls.sql` | Políticas de acceso por rol y por comunidad |
+| `migrations/0005_vistas_security_invoker.sql` | Hace que las vistas respeten RLS |
+| `migrations/0006_endurecer_funciones.sql` | search_path fijo y cierre del acceso anónimo a las funciones |
 | `seed/0001_prospectos.sql` | Los 9 prospectos reales migrados desde la planilla |
+| `seed/0002_plantilla_estandar.sql` | Checklist mensual estándar y comunidad de prueba |
+
+## Proyecto en uso
+
+El esquema está aplicado en el proyecto `vnjqzpbtcccpnxngoqfx`
+(`https://vnjqzpbtcccpnxngoqfx.supabase.co`), con los 9 prospectos cargados, un
+perfil `admin` y la comunidad de prueba.
 
 ## De dónde sale el modelo
 
@@ -41,6 +50,14 @@ columnas de la hoja Usuarios y lo aplicaba el Apps Script; cualquiera con acceso
 a la planilla veía todo. Ahora lo hace Postgres: aunque alguien consulte directo
 con la clave pública, solo recibe lo que su rol permite.
 
+## Una trampa que conviene recordar
+
+Una vista de Postgres se ejecuta con los permisos de su dueño, no de quien
+consulta. Con RLS activo en todas las tablas, `prospectos_con_semaforo` y
+`controles_con_avance` igual devolvían todo: bastaba consultar la vista en vez de
+la tabla. Por eso las tres vistas llevan `security_invoker = true`
+(`0005`). Cualquier vista nueva sobre datos con RLS necesita lo mismo.
+
 ## Roles
 
 | Rol | Alcance |
@@ -67,12 +84,15 @@ En un proyecto nuevo de Supabase, correr en orden desde el editor SQL:
 
 ```
 0001_nucleo.sql → 0002_crm.sql → 0003_terreno.sql → 0004_rls.sql
+              → 0005_vistas_security_invoker.sql → 0006_endurecer_funciones.sql
 ```
 
-Después el seed:
+Después los seeds. El `0002` necesita que exista un perfil con rol `admin`, así
+que primero hay que crear el usuario en *Authentication → Users* y su fila en
+`perfiles`:
 
 ```
-seed/0001_prospectos.sql
+seed/0001_prospectos.sql → seed/0002_plantilla_estandar.sql
 ```
 
 Con la CLI de Supabase:
@@ -113,10 +133,12 @@ Para probar RLS hay que consultar con un rol sin privilegios (RLS no aplica al
 superusuario) y fijar el usuario simulado:
 
 ```sql
-set role autenticado;
+set role autenticado;               -- en Supabase el rol se llama `authenticated`
 set request.jwt.claim.sub = '<uuid del perfil>';
 select * from comunidades;
 ```
+
+Contra el proyecto real, lo mismo con `set local` dentro de una transacción.
 
 ## Qué falta
 

@@ -18,18 +18,25 @@ Las dos variables son públicas por diseño: la clave `anon` no da acceso a nada
 que las políticas de RLS no permitan. La clave `service_role` no va acá ni en
 ningún archivo que llegue al navegador.
 
+El proyecto conectado es `vnjqzpbtcccpnxngoqfx`; la URL y la clave `anon` están
+en el panel de Supabase, en *Project Settings → API*.
+
 Sin credenciales la app arranca igual y muestra el aviso en la pantalla de
 ingreso, en vez de quedar en blanco.
 
 ## Desplegar en Netlify
 
-Es un segundo sitio, distinto del actual:
+El sitio ya existe: **coproactiva-app**
+(`https://app.netlify.com/projects/coproactiva-app`), distinto del sitio del
+generador de propuestas. Las variables `VITE_SUPABASE_URL` y
+`VITE_SUPABASE_ANON_KEY` ya están cargadas.
 
-1. Nuevo sitio desde el mismo repositorio.
+Falta enlazarlo al repositorio, que es lo único que la API de Netlify no permite
+hacer desde fuera:
+
+1. *Project configuration → Build & deploy → Link repository* → este repositorio.
 2. **Base directory:** `app`
 3. Build y publish los toma de `app/netlify.toml` (`npm run build` → `dist`).
-4. En *Site configuration → Environment variables*, agregar `VITE_SUPABASE_URL`
-   y `VITE_SUPABASE_ANON_KEY`.
 
 El redirect `/*` → `/index.html` ya está configurado: sin él, entrar directo a
 `/control/<id>` daría 404.
