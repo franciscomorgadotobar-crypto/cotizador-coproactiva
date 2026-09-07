@@ -17,6 +17,19 @@ const ESTADOS = [
   ['critico', 'Crítico']
 ];
 
+/* Un punto está respondido según su tipo: los de estado por su estado, los
+ * demás por tener respuesta. Mirando solo el estado, una lectura de medidor ya
+ * anotada seguía contando como pendiente y el levantamiento nunca se completaba.
+ *
+ * Va fuera del componente a propósito: `categorias` la usa dentro de un useMemo,
+ * que corre durante el render, así que una constante declarada más abajo estaría
+ * en zona muerta y dejaría la pantalla en blanco. */
+function respondido(i) {
+  if (i.tipo_ingreso === 'foto' || i.tipo_ingreso === 'firma') return true;
+  if (!i.tipo_ingreso || i.tipo_ingreso === 'estado') return i.estado !== 'sin_evaluar';
+  return i.respuesta != null;
+}
+
 export default function Levantamiento() {
   const { id } = useParams();
   const navegar = useNavigate();
@@ -59,7 +72,7 @@ export default function Levantamiento() {
           .maybeSingle(),
         supabase
           .from('control_items')
-          .select('id, grupo, texto, orden, estado, nota, respuesta, tipo_ingreso, config, plantilla_item_id')
+          .select('id, grupo, texto, orden, estado, nota, respuesta, tipo_ingreso, config, requiere_foto, es_critico, plantilla_item_id')
           .eq('control_id', id)
           .order('orden'),
         supabase
@@ -100,14 +113,23 @@ export default function Levantamiento() {
     return [...m.entries()].map(([nombre, lista]) => ({
       nombre,
       items: lista,
-      evaluados: lista.filter(i => i.estado !== 'sin_evaluar').length,
+      evaluados: lista.filter(respondido).length,
       criticos: lista.filter(i => i.estado === 'critico').length
     }));
   }, [items]);
 
-  const evaluados = items.filter(i => i.estado !== 'sin_evaluar').length;
+  const evaluados = items.filter(respondido).length;
   const pct = items.length ? Math.round((evaluados / items.length) * 100) : 0;
   const faltantes = items.length - evaluados;
+
+  /* La plantilla puede exigir fotografía en un punto. Esa exigencia se copió al
+   * levantamiento, así que acá se puede hacer cumplir: sin la foto no se envía.
+   * Una exigencia declarada que nadie aplica es peor que no tenerla. */
+  const sinFoto = items.filter(
+    i => i.requiere_foto && fotos.filter(
+      f => f.control_item_id === i.id && f.clase !== 'firma'
+    ).length === 0
+  );
   const fotosDe = itemId => fotos
     .filter(f => f.control_item_id === itemId && f.clase !== 'firma')
     .sort((a, b) => a.orden - b.orden);
@@ -537,13 +559,20 @@ export default function Levantamiento() {
           </button>
           <button className="boton boton-movil crece"
                   onClick={enviar}
-                  disabled={enviando || faltantes > 0 || !control.checkin_en}
+                  disabled={enviando || faltantes > 0 || sinFoto.length > 0 || !control.checkin_en}
                   title={
                     !control.checkin_en ? 'Falta el check-in'
-                    : faltantes > 0 ? `Faltan ${faltantes} puntos por evaluar`
-                    : undefined
+                    : faltantes > 0
+                      ? (faltantes === 1 ? 'Falta 1 punto por responder' : `Faltan ${faltantes} puntos por responder`)
+                    : sinFoto.length > 0
+                      ? `Faltan fotos en: ${sinFoto.map(i => i.texto).join(', ')}`
+                      : undefined
                   }>
-            {enviando ? 'Enviando…' : faltantes > 0 ? `Faltan ${faltantes}` : 'Enviar levantamiento'}
+            {enviando ? 'Enviando…'
+             : faltantes > 0 ? `Faltan ${faltantes}`
+             : sinFoto.length > 0
+               ? (sinFoto.length === 1 ? 'Falta 1 foto' : `Faltan ${sinFoto.length} fotos`)
+             : 'Enviar levantamiento'}
           </button>
         </footer>
       )}
@@ -576,6 +605,10 @@ function Punto({ item, fotos, cerrado, onMarcar, onNota, onRespuesta, onFotos, o
                     placeholder="Describe el hallazgo y dónde está" disabled={cerrado}
                     onBlur={e => onNota(item, e.target.value)} />
         </div>
+      )}
+
+      {item.requiere_foto && fotos.length === 0 && !cerrado && (
+        <p className="micro exige-foto">Este punto exige al menos una fotografía</p>
       )}
 
       <div className="fotos-punto">

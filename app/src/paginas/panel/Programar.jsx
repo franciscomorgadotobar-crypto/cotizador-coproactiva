@@ -135,7 +135,7 @@ export default function Programar() {
      * levantamiento debe seguir diciendo lo que preguntaba hoy. */
     const { data: items, error: e2 } = await supabase
       .from('plantilla_items')
-      .select('id, grupo, texto, orden, orden_grupo, tipo_ingreso, config')
+      .select('id, grupo, texto, orden, orden_grupo, tipo_ingreso, config, requiere_foto, es_critico')
       .eq('plantilla_id', datos.plantilla_id)
       .eq('activo', true)
       .order('orden_grupo').order('orden');
@@ -150,7 +150,9 @@ export default function Programar() {
           texto: it.texto,
           orden: n,
           tipo_ingreso: it.tipo_ingreso,
-          config: it.config
+          config: it.config,
+          requiere_foto: it.requiere_foto,
+          es_critico: it.es_critico
         }))
       );
       if (e3) { setGuardando(false); return setError(e3.message); }

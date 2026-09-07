@@ -589,3 +589,9 @@ a:hover { color: var(--pizarra); }
   border: 1px solid var(--borde);
   border-radius: var(--radio-control);
 }
+
+.exige-foto {
+  margin: 10px 0 0;
+  color: var(--alerta-texto);
+  font-weight: 600;
+}

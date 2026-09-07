@@ -46,13 +46,14 @@ const ITEMS = [
   { id: 'i1', grupo: 'Acceso', texto: 'Conserje en turno', orden: 0,
     estado: 'cumple', nota: null, respuesta: null, tipo_ingreso: 'estado', config: {} },
   { id: 'i2', grupo: 'Acceso', texto: 'Cámaras grabando', orden: 1,
-    estado: 'sin_evaluar', nota: null, respuesta: null, tipo_ingreso: 'estado', config: {} },
+    estado: 'cumple', nota: null, respuesta: null, tipo_ingreso: 'estado', config: {},
+    requiere_foto: true },
   { id: 'i3', grupo: 'Instalaciones', texto: 'Lectura del medidor', orden: 2,
     estado: 'sin_evaluar', nota: null, respuesta: null, tipo_ingreso: 'numero',
-    config: { unidad: 'm³' } },
+    config: { unidad: 'm³' }, requiere_foto: false },
   { id: 'i4', grupo: 'Instalaciones', texto: 'Estado de la fachada', orden: 3,
     estado: 'sin_evaluar', nota: null, respuesta: null, tipo_ingreso: 'escala',
-    config: { min: 1, max: 10 } }
+    config: { min: 1, max: 10 }, requiere_foto: false }
 ];
 
 const TABLAS = {
