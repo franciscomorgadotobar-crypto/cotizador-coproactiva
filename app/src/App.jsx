@@ -5,6 +5,7 @@ import Inicio from './paginas/panel/Inicio';
 import Plantillas from './paginas/panel/Plantillas';
 import EditorPlantilla from './paginas/panel/Plantilla';
 import Programar from './paginas/panel/Programar';
+import Equipo from './paginas/panel/Equipo';
 import Levantamiento from './paginas/terreno/Control';
 
 function Privada({ children }) {
@@ -32,6 +33,7 @@ export default function App() {
       <Route path="/" element={<Privada><Inicio /></Privada>} />
       <Route path="/plantillas" element={<Privada><Plantillas /></Privada>} />
       <Route path="/plantillas/:id" element={<Privada><EditorPlantilla /></Privada>} />
+      <Route path="/equipo" element={<Privada><Equipo /></Privada>} />
       <Route path="/nuevo" element={<Privada><Programar /></Privada>} />
       <Route path="/control/:id/editar" element={<Privada><Programar /></Privada>} />
       <Route path="/control/:id" element={<Privada><Levantamiento /></Privada>} />

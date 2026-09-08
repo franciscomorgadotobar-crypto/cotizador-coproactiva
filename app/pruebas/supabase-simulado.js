@@ -14,9 +14,16 @@ const PERFIL = {
   id: '6165f239-1805-4c68-a526-3577afc9912e',
   nombre: 'Francisco Morgado',
   email: 'prueba@coproactiva.cl',
-  rol: 'admin',
+  rol: 'superadmin',
   activo: true
 };
+
+const EQUIPO = [
+  PERFIL,
+  { id: 'u2', nombre: 'Marta Silva',  email: 'marta@coproactiva.cl',  rol: 'jefatura', activo: true },
+  { id: 'u3', nombre: 'Luis Cárcamo', email: 'luis@coproactiva.cl',   rol: 'terreno',  activo: true },
+  { id: 'u4', nombre: 'Ana Pinto',    email: 'ana@coproactiva.cl',    rol: 'terreno',  activo: false }
+];
 
 const COMUNIDAD_ID = 'c0000000-0000-4000-8000-000000000001';
 const CONTROL_ID   = 'c0000000-0000-4000-8000-000000000002';
@@ -57,7 +64,8 @@ const ITEMS = [
 ];
 
 const TABLAS = {
-  perfiles: [PERFIL],
+  perfiles: EQUIPO,
+  perfil_comunidades: [{ perfil_id: 'u2', comunidad_id: COMUNIDAD_ID }],
   comunidades: [{ id: COMUNIDAD_ID, nombre: 'Edificio de prueba', comuna: 'San Bernardo' }],
   prospectos: [{ id: PROSPECTO_ID, nombre_condominio: 'Las Palmeras', comuna: 'Providencia', etapa: 'diagnostico' }],
   controles: [CONTROL],
@@ -75,10 +83,15 @@ const TABLAS = {
 /* Consulta encadenable. Cada método devuelve el mismo objeto y la promesa se
  * resuelve al final, igual que el cliente real. */
 function consulta(tabla) {
-  const filas = [...(TABLAS[tabla] ?? [])];
+  let filas = [...(TABLAS[tabla] ?? [])];
   const api = {
     select: () => api,
-    eq: () => api,
+    eq: (columna, valor) => {
+      if (filas.length && columna in (filas[0] ?? {})) {
+        filas = filas.filter(f => f[columna] === valor);
+      }
+      return api;
+    },
     not: () => api,
     order: () => api,
     insert: d => {
@@ -110,7 +123,7 @@ export const supabase = {
   from: consulta,
   auth: {
     getSession: () => Promise.resolve({
-      data: { session: { user: { id: PERFIL.id, email: PERFIL.email } } }
+      data: { session: { user: { id: PERFIL.id, email: PERFIL.email }, access_token: 'token-de-prueba' } }
     }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signInWithPassword: () => Promise.resolve({ error: null }),

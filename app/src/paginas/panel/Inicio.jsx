@@ -20,6 +20,8 @@ export default function Inicio() {
   const [error, setError] = useState(null);
 
   const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
+  // Jefatura arma plantillas y programa visitas, pero no da de alta usuarios.
+  const esAdministracion = perfil && ['superadmin', 'admin'].includes(perfil.rol);
 
   useEffect(() => {
     let vigente = true;
@@ -127,6 +129,12 @@ export default function Inicio() {
               <span className="crece">Plantillas</span>
               <span aria-hidden="true">›</span>
             </Link>
+            {esAdministracion && (
+              <Link to="/equipo" className="acceso">
+                <span className="crece">Equipo</span>
+                <span aria-hidden="true">›</span>
+              </Link>
+            )}
           </>
         )}
 
