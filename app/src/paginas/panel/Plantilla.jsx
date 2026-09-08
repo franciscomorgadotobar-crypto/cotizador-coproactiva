@@ -122,6 +122,15 @@ export default function EditorPlantilla() {
     if (error) setError(error.message);
   }
 
+  /* El orden obligatorio es de la plantilla entera, no de un punto: si un
+   * levantamiento tiene que hacerse en el orden en que se recorre el edificio,
+   * eso no depende de qué pregunta sea, depende de qué plantilla es. */
+  async function guardarPlantilla(cambios) {
+    setPlantilla(p => ({ ...p, ...cambios }));
+    const { error } = await supabase.from('plantillas_control').update(cambios).eq('id', id);
+    if (error) setError(error.message);
+  }
+
   async function borrarItem(item) {
     if (!confirm(`¿Eliminar "${item.texto}"?`)) return;
     setItems(xs => xs.filter(x => x.id !== item.id));
@@ -154,9 +163,18 @@ export default function EditorPlantilla() {
           {guardando && <span className="micro apagado">Guardando…</span>}
         </div>
         <h1 className="h3">{plantilla.nombre}</h1>
-        <p className="chico apagado" style={{ margin: '3px 0 0' }}>
+        <p className="chico apagado" style={{ margin: '3px 0 0 0' }}>
           {items.length} puntos en {categorias.length} categorías
         </p>
+
+        {/* Se pide el orden completo, no solo "no dejar en blanco": exigir
+            respuesta sin exigir orden ya lo hace cada punto por su cuenta con
+            "Responder es obligatorio". Esto es lo que impide adelantarse. */}
+        <label className="marca" style={{ marginTop: 10 }}>
+          <input type="checkbox" defaultChecked={plantilla.secuencial}
+                 onChange={e => guardarPlantilla({ secuencial: e.target.checked })} />
+          <span>Obliga a responder en orden, sin saltarse preguntas</span>
+        </label>
       </header>
 
       <div className="cuerpo">
@@ -293,21 +311,36 @@ function ItemPlantilla({ item, abierto, onAbrir, onGuardar, onBorrar }) {
           )}
 
           {/* La foto se puede pedir en cualquier tipo de punto, no solo en los
-              de tipo "foto": una lectura de medidor también quiere su respaldo. */}
+              de tipo "foto": una lectura de medidor también quiere su respaldo.
+              "Sin foto" no se ofrece en un punto de tipo Foto: ahí la fotografía
+              es la respuesta, y sin ella el punto no tendría cómo contestarse. */}
           <div className="campo">
             <label className="etiqueta-campo">Fotografías</label>
             <select defaultValue={cfg.origen ?? 'ambas'}
-                    onChange={e => cambiarConfig('origen', e.target.value)}>
+                    onChange={e => {
+                      const origen = e.target.value;
+                      cambiarConfig('origen', origen);
+                      if (origen === 'ninguna' && item.requiere_foto) onGuardar({ requiere_foto: false });
+                    }}>
               <option value="ambas">Cámara o galería</option>
               <option value="camara">Solo cámara, en el momento</option>
               <option value="galeria">Solo galería</option>
+              {item.tipo_ingreso !== 'foto' && <option value="ninguna">Sin foto</option>}
             </select>
           </div>
 
+          {cfg.origen !== 'ninguna' && (
+            <label className="marca">
+              <input type="checkbox" defaultChecked={item.requiere_foto}
+                     onChange={e => onGuardar({ requiere_foto: e.target.checked })} />
+              <span>Exigir al menos una foto</span>
+            </label>
+          )}
+
           <label className="marca">
-            <input type="checkbox" defaultChecked={item.requiere_foto}
-                   onChange={e => onGuardar({ requiere_foto: e.target.checked })} />
-            <span>Exigir al menos una foto</span>
+            <input type="checkbox" defaultChecked={item.obligatorio !== false}
+                   onChange={e => onGuardar({ obligatorio: e.target.checked })} />
+            <span>Responder es obligatorio</span>
           </label>
 
           <label className="marca">

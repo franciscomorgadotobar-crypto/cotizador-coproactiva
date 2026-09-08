@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSesion } from '../../lib/sesion';
 import { AvisoConexion } from '../../lib/estado';
+import Campana from '../../componentes/Campana';
 import MapaPrevio from '../../componentes/MapaPrevio';
 import { hayConexion } from '../../lib/sincronizacion';
 import { leerControles, guardarControl } from '../../lib/local';
@@ -120,6 +121,8 @@ export default function Inicio() {
               {hoy.charAt(0).toUpperCase() + hoy.slice(1)}
             </p>
           </div>
+          <Campana pendientes={pendientes.length}
+                   criticos={pendientes.filter(c => c.items_criticos > 0).length} />
           <button className="boton boton-texto" onClick={salir}>Salir</button>
         </div>
       </header>
@@ -187,7 +190,7 @@ export default function Inicio() {
           </>
         )}
 
-        <div className="grupo-titulo">
+        <div className="grupo-titulo" id="por-hacer">
           <span className="etiqueta-grupo">Por hacer</span>
         </div>
 

@@ -50,7 +50,7 @@ export default function Programar() {
           .not('etapa', 'in', '("ganado","perdido")')
           .order('nombre_condominio'),
         supabase.from('plantillas_control')
-          .select('id, nombre, plantilla_items(count)')
+          .select('id, nombre, secuencial, plantilla_items(count)')
           .eq('activa', true).order('nombre'),
         supabase.from('perfiles').select('id, nombre, rol, activo').order('nombre')
       ]);
@@ -105,6 +105,7 @@ export default function Programar() {
     setError(null);
 
     const [tipo, destinoId] = datos.destino.split(':');
+    const plantillaElegida = plantillas.find(p => p.id === datos.plantilla_id);
     const fila = {
       comunidad_id: tipo === 'comunidad' ? destinoId : null,
       prospecto_id: tipo === 'prospecto' ? destinoId : null,
@@ -113,13 +114,20 @@ export default function Programar() {
       periodo: datos.periodo || null,
       programado_para: datos.programado_para
         ? new Date(datos.programado_para).toISOString()
-        : null
+        : null,
+      // Se copia al crear, igual que los puntos: si la plantilla cambia
+      // después, este levantamiento no tiene por qué cambiar de reglas a
+      // mitad del recorrido.
+      secuencial: plantillaElegida?.secuencial ?? false
     };
 
     if (editando) {
       // La plantilla no viaja en el update: no es editable, y enviarla arriesga
-      // borrarla si el desplegable no alcanzó a cargar su valor.
-      const { plantilla_id, ...cambios } = fila;
+      // borrarla si el desplegable no alcanzó a cargar su valor. `secuencial`
+      // tampoco: se copió al crear, y si viajara acá tomaría el valor actual
+      // de la plantilla en vez de quedarse con el que tenía el levantamiento
+      // desde el principio.
+      const { plantilla_id, secuencial, ...cambios } = fila;
       const { error } = await supabase.from('controles').update(cambios).eq('id', id);
       setGuardando(false);
       if (error) return setError(error.message);
@@ -135,7 +143,7 @@ export default function Programar() {
      * levantamiento debe seguir diciendo lo que preguntaba hoy. */
     const { data: items, error: e2 } = await supabase
       .from('plantilla_items')
-      .select('id, grupo, texto, orden, orden_grupo, tipo_ingreso, config, requiere_foto, es_critico')
+      .select('id, grupo, texto, orden, orden_grupo, tipo_ingreso, config, requiere_foto, es_critico, obligatorio')
       .eq('plantilla_id', datos.plantilla_id)
       .eq('activo', true)
       .order('orden_grupo').order('orden');
@@ -152,7 +160,8 @@ export default function Programar() {
           tipo_ingreso: it.tipo_ingreso,
           config: it.config,
           requiere_foto: it.requiere_foto,
-          es_critico: it.es_critico
+          es_critico: it.es_critico,
+          obligatorio: it.obligatorio
         }))
       );
       if (e3) { setGuardando(false); return setError(e3.message); }

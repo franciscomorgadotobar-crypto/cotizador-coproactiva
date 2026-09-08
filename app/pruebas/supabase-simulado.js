@@ -46,6 +46,7 @@ const CONTROL = {
   items_evaluados: 1,
   items_totales: 4,
   items_criticos: 0,
+  secuencial: true,
   comunidades: { nombre: 'Edificio de prueba', direccion: 'América 755', comuna: 'San Bernardo' }
 };
 
@@ -126,7 +127,10 @@ const TABLAS = {
   ],
   prospectos: [{ id: PROSPECTO_ID, nombre_condominio: 'Las Palmeras', comuna: 'Providencia', etapa: 'diagnostico' }],
   controles: [CONTROL],
-  controles_con_avance: VISITAS,
+  // El propio CONTROL entra acá también: es el que abre la pantalla de
+  // levantamiento en /control/:id, y esa pantalla consulta esta tabla, no
+  // 'controles'.
+  controles_con_avance: [CONTROL, ...VISITAS],
   control_items: ITEMS,
   control_pausas: [],
   plantillas_control: [{ id: 'pl1', nombre: 'Control mensual', activa: true, plantilla_items: [{ count: 4 }] }],

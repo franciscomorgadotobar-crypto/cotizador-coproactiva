@@ -161,6 +161,38 @@ a:hover { color: var(--pizarra); }
   color: var(--critico-texto);
 }
 
+/* ------------------------------------------------------------------ Campana */
+
+.campana {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tactil);
+  height: var(--tactil);
+  font-size: 19px;
+  text-decoration: none;
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.campana:not(.sin-pendientes) { filter: none; opacity: 1; }
+.globo {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--pizarra);
+  color: var(--texto-inverso);
+  font: 700 10px/1 var(--fuente-display);
+}
+.globo.critico { background: var(--critico-texto); }
+
 /* ------------------------------------------------------------------- Chips */
 
 .chip {

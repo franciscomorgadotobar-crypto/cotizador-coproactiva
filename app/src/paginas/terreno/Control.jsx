@@ -72,12 +72,12 @@ export default function Levantamiento() {
       const [rc, ri, rp, ra] = await Promise.all([
         supabase
           .from('controles_con_avance')
-          .select('id, comunidad_id, prospecto_id, estado, periodo, checkin_en, checkin_precision, creado_en, reabierto_en, motivo_reapertura, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
+          .select('id, comunidad_id, prospecto_id, estado, periodo, checkin_en, checkin_precision, creado_en, reabierto_en, motivo_reapertura, destino_nombre, destino_direccion, destino_comuna, destino_tipo, secuencial')
           .eq('id', id)
           .maybeSingle(),
         supabase
           .from('control_items')
-          .select('id, grupo, texto, orden, estado, nota, respuesta, tipo_ingreso, config, requiere_foto, es_critico, plantilla_item_id')
+          .select('id, grupo, texto, orden, estado, nota, respuesta, tipo_ingreso, config, requiere_foto, es_critico, obligatorio, plantilla_item_id')
           .eq('control_id', id)
           .order('orden'),
         supabase
@@ -181,6 +181,15 @@ export default function Levantamiento() {
   const evaluados = items.filter(i => respondido(i, tieneFoto)).length;
   const pct = items.length ? Math.round((evaluados / items.length) * 100) : 0;
   const faltantes = items.length - evaluados;
+
+  /* Lo que de verdad impide enviar. `faltantes` cuenta todo —incluye lo
+   * opcional— porque el avance de arriba tiene que mostrar cuánto se
+   * contestó de verdad. Enviar es otra pregunta: solo lo obligatorio puede
+   * trabar el botón; un punto marcado como opcional en la plantilla se puede
+   * dejar en blanco y el levantamiento igual se manda. */
+  const pendientesObligatorios = items.filter(
+    i => i.obligatorio !== false && !respondido(i, tieneFoto)
+  );
 
   /* La plantilla puede exigir fotografía en un punto. Esa exigencia se copió al
    * levantamiento, así que acá se puede hacer cumplir: sin la foto no se envía.
@@ -609,24 +618,36 @@ export default function Levantamiento() {
                     <div className="conteo">
                       <span>{paso + 1} de {cat.items.length}</span>
                       {/* Marcas del recorrido: se ve de un vistazo qué queda
-                          pendiente dentro de la categoría y se salta ahí. */}
+                          pendiente dentro de la categoría y se salta ahí.
+                          Con la plantilla en modo secuencial, no se puede
+                          saltar a un punto más allá del primero sin responder
+                          —volver atrás sí, siempre—. */}
                       <div className="marcadores">
-                        {cat.items.map((it, i) => (
-                          <button key={it.id} type="button"
-                                  className={
-                                    'marcador'
-                                    + (i === paso ? ' aqui' : '')
-                                    + (respondido(it, tieneFoto) ? ' hecho' : '')
-                                    + (it.estado === 'critico' ? ' critico' : '')
-                                  }
-                                  aria-label={`Ir al punto ${i + 1}`}
-                                  onClick={() => setPaso(i)} />
-                        ))}
+                        {(() => {
+                          const primerPendiente = cat.items.findIndex(it => !respondido(it, tieneFoto));
+                          return cat.items.map((it, i) => {
+                            const bloqueado = control.secuencial
+                              && primerPendiente !== -1 && i > primerPendiente;
+                            return (
+                              <button key={it.id} type="button"
+                                      className={
+                                        'marcador'
+                                        + (i === paso ? ' aqui' : '')
+                                        + (respondido(it, tieneFoto) ? ' hecho' : '')
+                                        + (it.estado === 'critico' ? ' critico' : '')
+                                      }
+                                      disabled={bloqueado}
+                                      aria-label={`Ir al punto ${i + 1}`}
+                                      onClick={() => setPaso(i)} />
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
 
                     {paso < cat.items.length - 1 ? (
                       <button type="button" className="boton"
+                              disabled={control.secuencial && !respondido(cat.items[paso], tieneFoto)}
                               onClick={() => setPaso(p => p + 1)}>
                         Siguiente ›
                       </button>
@@ -634,6 +655,7 @@ export default function Levantamiento() {
                       /* En el último punto, avanzar salta a la categoría
                          siguiente: el recorrido continúa sin volver a la lista. */
                       <button type="button" className="boton"
+                              disabled={control.secuencial && !respondido(cat.items[paso], tieneFoto)}
                               onClick={() => {
                                 const i = categorias.findIndex(c => c.nombre === cat.nombre);
                                 const siguiente = categorias[i + 1];
@@ -680,17 +702,19 @@ export default function Levantamiento() {
           </button>
           <button className="boton boton-movil crece"
                   onClick={enviar}
-                  disabled={enviando || faltantes > 0 || sinFoto.length > 0 || !control.checkin_en}
+                  disabled={enviando || pendientesObligatorios.length > 0 || sinFoto.length > 0 || !control.checkin_en}
                   title={
                     !control.checkin_en ? 'Falta el check-in'
-                    : faltantes > 0
-                      ? (faltantes === 1 ? 'Falta 1 punto por responder' : `Faltan ${faltantes} puntos por responder`)
+                    : pendientesObligatorios.length > 0
+                      ? (pendientesObligatorios.length === 1
+                          ? 'Falta 1 punto obligatorio por responder'
+                          : `Faltan ${pendientesObligatorios.length} puntos obligatorios por responder`)
                     : sinFoto.length > 0
                       ? `Faltan fotos en: ${sinFoto.map(i => i.texto).join(', ')}`
                       : undefined
                   }>
             {enviando ? 'Enviando…'
-             : faltantes > 0 ? `Faltan ${faltantes}`
+             : pendientesObligatorios.length > 0 ? `Faltan ${pendientesObligatorios.length}`
              : sinFoto.length > 0
                ? (sinFoto.length === 1 ? 'Falta 1 foto' : `Faltan ${sinFoto.length} fotos`)
              : 'Enviar levantamiento'}
@@ -732,44 +756,51 @@ function Punto({ item, fotos, cerrado, onMarcar, onNota, onRespuesta, onFotos, o
         <p className="micro exige-foto">Este punto exige al menos una fotografía</p>
       )}
 
-      <div className="fotos-punto">
-        {fotos.map(f => (
-          <figure key={f.id}>
-            <img src={f.blob ? URL.createObjectURL(f.blob) : f.url} alt={f.descripcion || 'Fotografía'} />
-            {!f.pendiente && <span className="subida" title="Subida" />}
-            <input
-              type="text" defaultValue={f.descripcion ?? ''} placeholder="Pie de foto"
-              disabled={cerrado} onBlur={e => onDescribir(f, e.target.value)}
-            />
-            {!cerrado && (
-              <button type="button" className="quitar" aria-label="Quitar foto"
-                      onClick={() => onQuitar(f)}>×</button>
-            )}
-          </figure>
-        ))}
+      {/* La plantilla puede decidir que este punto no lleva fotografía. Sin
+          esto, el botón de agregar aparecía igual en todos los puntos, sin
+          forma de quitarlo donde no correspondía. */}
+      {item.config?.origen !== 'ninguna' && (
+        <div className="fotos-punto">
+          {fotos.map(f => (
+            <figure key={f.id}>
+              <img src={f.blob ? URL.createObjectURL(f.blob) : f.url} alt={f.descripcion || 'Fotografía'} />
+              {!f.pendiente && <span className="subida" title="Subida" />}
+              <input
+                type="text" defaultValue={f.descripcion ?? ''} placeholder="Pie de foto"
+                disabled={cerrado} onBlur={e => onDescribir(f, e.target.value)}
+              />
+              {!cerrado && (
+                <button type="button" className="quitar" aria-label="Quitar foto"
+                        onClick={() => onQuitar(f)}>×</button>
+              )}
+            </figure>
+          ))}
 
-        {!cerrado && (
-          <>
-            {/* `capture` abre la cámara directo en el teléfono en vez del
-                selector de archivos; `multiple` deja adjuntar varias del rollo
-                cuando ya se fotografió antes de abrir la app. */}
-            <input ref={entrada} type="file" accept="image/*"
-                   {...(item.config?.origen === 'galeria' ? {} : { capture: 'environment' })}
-                   multiple hidden
-                   onChange={e => {
-                     // Se copia antes de limpiar el input: la FileList es una
-                     // vista viva y al vaciar el campo se pierde el contenido.
-                     const archivos = Array.from(e.target.files);
-                     e.target.value = '';
-                     onFotos(item, archivos);
-                   }} />
-            <button type="button" className="agregar-foto" onClick={() => entrada.current?.click()}>
-              <span aria-hidden="true">＋</span>
-              Foto
-            </button>
-          </>
-        )}
-      </div>
+          {!cerrado && (
+            <>
+              {/* `capture` abre la cámara directo y salta el selector de
+                  archivos: corresponde solo cuando la plantilla pide
+                  específicamente cámara. En cualquier otro caso —incluido el
+                  valor por defecto— se deja que el teléfono ofrezca su
+                  selector nativo, que ya trae cámara y galería juntas. */}
+              <input ref={entrada} type="file" accept="image/*"
+                     {...(item.config?.origen === 'camara' ? { capture: 'environment' } : {})}
+                     multiple hidden
+                     onChange={e => {
+                       // Se copia antes de limpiar el input: la FileList es una
+                       // vista viva y al vaciar el campo se pierde el contenido.
+                       const archivos = Array.from(e.target.files);
+                       e.target.value = '';
+                       onFotos(item, archivos);
+                     }} />
+              <button type="button" className="agregar-foto" onClick={() => entrada.current?.click()}>
+                <span aria-hidden="true">＋</span>
+                Foto
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </article>
   );
 }
