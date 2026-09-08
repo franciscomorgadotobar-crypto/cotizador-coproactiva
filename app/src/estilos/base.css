@@ -807,3 +807,28 @@ a:hover { color: var(--pizarra); }
   color: var(--texto-titulo);
 }
 .cabecera-trabajador .micro { color: var(--texto-tenue); letter-spacing: 0.06em; }
+
+/* Lugares del mapa: una fila por comunidad, con sus visitas dentro. */
+.lugar {
+  margin-bottom: 10px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  overflow: hidden;
+}
+.lugar.elegido { border-color: var(--naranja); }
+.lugar > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.lugar .visita {
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--borde-suave);
+  border-radius: 0;
+  padding: 9px 14px 9px 33px;
+}
+.lugar .visita .ir { color: var(--texto-tenue); font-size: 15px; }

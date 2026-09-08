@@ -32,20 +32,31 @@ const COLORES = {
   anulado:   '#a4402f'
 };
 
-function marcador(color, critico) {
-  /* Se dibuja el pin en SVG en vez de usar una imagen: así el color sale de los
-   * tokens de marca y no hay que mantener cinco archivos png. */
+/* Se dibuja el pin en SVG en vez de usar una imagen: así el color sale de los
+ * tokens de marca y no hay que mantener cinco archivos png.
+ *
+ * Cuando el lugar tiene más de una visita, el pin muestra cuántas. Un edificio
+ * revisado doce veces son doce pines encima del otro: no se distingue de uno
+ * visitado una sola vez, que es justo lo que se está mirando. */
+function marcador(color, critico, cuantas) {
+  const muchas = cuantas > 1;
   return L.divIcon({
     className: 'pin-vacio',
-    html: `<svg width="26" height="34" viewBox="0 0 26 34" xmlns="http://www.w3.org/2000/svg">
+    html: `<svg width="${muchas ? 32 : 26}" height="${muchas ? 42 : 34}"
+                viewBox="0 0 26 34" xmlns="http://www.w3.org/2000/svg">
              <path d="M13 0C5.8 0 0 5.8 0 13c0 9.7 13 21 13 21s13-11.3 13-21C26 5.8 20.2 0 13 0z"
                    fill="${color}" stroke="#fff" stroke-width="1.5"/>
-             <circle cx="13" cy="13" r="5" fill="#fff" opacity="${critico ? 1 : 0.85}"/>
-             ${critico ? '<circle cx="13" cy="13" r="2.6" fill="#a4402f"/>' : ''}
+             ${muchas
+               ? `<circle cx="13" cy="13" r="7.5" fill="#fff"/>
+                  <text x="13" y="16.5" text-anchor="middle"
+                        font-family="Helvetica,Arial,sans-serif" font-size="9" font-weight="700"
+                        fill="${color}">${cuantas}</text>`
+               : `<circle cx="13" cy="13" r="5" fill="#fff" opacity="${critico ? 1 : 0.85}"/>
+                  ${critico ? '<circle cx="13" cy="13" r="2.6" fill="#a4402f"/>' : ''}`}
            </svg>`,
-    iconSize: [26, 34],
-    iconAnchor: [13, 34],
-    popupAnchor: [0, -30]
+    iconSize: muchas ? [32, 42] : [26, 34],
+    iconAnchor: muchas ? [16, 42] : [13, 34],
+    popupAnchor: [0, -34]
   });
 }
 
@@ -65,7 +76,7 @@ export default function Mapa() {
   useEffect(() => {
     supabase
       .from('controles_con_avance')
-      .select('id, estado, periodo, checkin_en, checkin_lat, checkin_lng, checkin_precision, enviado_en, programado_para, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
+      .select('id, comunidad_id, prospecto_id, estado, periodo, checkin_en, checkin_lat, checkin_lng, checkin_precision, enviado_en, programado_para, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
       .not('checkin_lat', 'is', null)
       .order('checkin_en', { ascending: false })
       .then(({ data, error }) => {
@@ -98,6 +109,49 @@ export default function Mapa() {
     return controles.filter(c => new Date(c.checkin_en).getTime() >= limite);
   }, [controles, rango, desde, hasta]);
 
+  /* Las visitas se agrupan por lugar. Un edificio con doce recorridos es una
+   * fila con doce dentro, no doce filas repetidas con el mismo nombre.
+   *
+   * La coordenada del grupo es el promedio de sus check-ins: cada uno cae unos
+   * metros distinto según dónde estaba la persona, y el promedio deja el pin
+   * sobre el edificio en vez de sobre el último lugar donde alguien sacó el
+   * teléfono. */
+  const lugares = useMemo(() => {
+    const m = new Map();
+    for (const c of visibles) {
+      const clave = c.comunidad_id ?? c.prospecto_id ?? c.destino_nombre;
+      if (!m.has(clave)) {
+        m.set(clave, {
+          clave,
+          nombre: c.destino_nombre,
+          comuna: c.destino_comuna,
+          tipo: c.destino_tipo,
+          visitas: []
+        });
+      }
+      m.get(clave).visitas.push(c);
+    }
+
+    return [...m.values()].map(l => {
+      const puntos = l.visitas.filter(
+        v => Number.isFinite(Number(v.checkin_lat)) && Number.isFinite(Number(v.checkin_lng))
+      );
+      return {
+        ...l,
+        lat: puntos.reduce((n, v) => n + Number(v.checkin_lat), 0) / puntos.length,
+        lng: puntos.reduce((n, v) => n + Number(v.checkin_lng), 0) / puntos.length,
+        // El color lo pone la visita más reciente: es el estado en que quedó.
+        estado: l.visitas[0].estado,
+        criticos: l.visitas.reduce((n, v) => n + (v.items_criticos ?? 0), 0),
+        fotos: l.visitas.reduce((n, v) => n + (v.fotos ?? 0), 0),
+        ultima: l.visitas[0].checkin_en,
+        // La peor precisión del grupo: si una de las mediciones fue mala, el
+        // grupo no puede presentarse como preciso.
+        precision: Math.max(...l.visitas.map(v => Number(v.checkin_precision) || 0))
+      };
+    }).sort((a, b) => new Date(b.ultima) - new Date(a.ultima));
+  }, [visibles]);
+
   // Montaje del mapa, una sola vez.
   useEffect(() => {
     if (mapa.current || !contenedor.current) return;
@@ -123,30 +177,28 @@ export default function Mapa() {
     if (!visibles.length) return;
 
     const puntos = [];
-    for (const c of visibles) {
-      const lat = Number(c.checkin_lat);
-      const lng = Number(c.checkin_lng);
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-      puntos.push([lat, lng]);
+    for (const l of lugares) {
+      if (!Number.isFinite(l.lat) || !Number.isFinite(l.lng)) continue;
+      puntos.push([l.lat, l.lng]);
 
-      const pin = L.marker([lat, lng], {
-        icon: marcador(COLORES[c.estado] ?? COLORES.pendiente, c.items_criticos > 0)
+      const pin = L.marker([l.lat, l.lng], {
+        icon: marcador(COLORES[l.estado] ?? COLORES.pendiente, l.criticos > 0, l.visitas.length)
       }).addTo(capa.current);
 
       pin.bindPopup(`
-        <strong>${c.destino_nombre ?? 'Sin nombre'}</strong><br>
-        ${new Date(c.checkin_en).toLocaleString('es-CL', { dateStyle: 'medium', timeStyle: 'short' })}<br>
-        ${c.items_evaluados} de ${c.items_totales} puntos
-        ${c.items_criticos ? ` · ${c.items_criticos} crítico${c.items_criticos > 1 ? 's' : ''}` : ''}
+        <strong>${l.nombre ?? 'Sin nombre'}</strong><br>
+        ${l.visitas.length} visita${l.visitas.length > 1 ? 's' : ''}
+        · última el ${new Date(l.ultima).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
+        ${l.criticos ? `<br>${l.criticos} crítico${l.criticos > 1 ? 's' : ''}` : ''}
       `);
-      pin.on('click', () => setElegido(c.id));
+      pin.on('click', () => setElegido(l.clave));
 
       /* La precisión del GPS se dibuja como un círculo. Un check-in con 300
        * metros de margen no prueba presencia en un edificio concreto, y verlo
        * es más honesto que mostrar un pin exacto que no lo es. */
-      if (c.checkin_precision > 40) {
-        L.circle([lat, lng], {
-          radius: Number(c.checkin_precision),
+      if (l.precision > 40) {
+        L.circle([l.lat, l.lng], {
+          radius: l.precision,
           color: '#4a5a68', weight: 1, opacity: 0.35,
           fillColor: '#4a5a68', fillOpacity: 0.08
         }).addTo(capa.current);
@@ -155,14 +207,25 @@ export default function Mapa() {
 
     if (puntos.length === 1) mapa.current.setView(puntos[0], 16);
     else if (puntos.length > 1) mapa.current.fitBounds(puntos, { padding: [40, 40] });
-  }, [visibles]);
+  }, [lugares]);
+
+  /* Tocar un lugar de la lista lo centra en el mapa. Con quince pines
+   * repartidos por Santiago, buscar a ojo cuál corresponde a una fila no es
+   * razonable. */
+  function irAlLugar(l) {
+    setElegido(l.clave);
+    if (mapa.current && Number.isFinite(l.lat)) {
+      mapa.current.setView([l.lat, l.lng], 16, { animate: true });
+      contenedor.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 
   const resumen = useMemo(() => ({
     visitas: visibles.length,
-    comunidades: new Set(visibles.map(c => c.destino_nombre)).size,
+    comunidades: lugares.length,
     criticos: visibles.reduce((n, c) => n + (c.items_criticos ?? 0), 0),
     fotos: visibles.reduce((n, c) => n + (c.fotos ?? 0), 0)
-  }), [visibles]);
+  }), [visibles, lugares]);
 
   return (
     <div className="pantalla pantalla-mapa">
@@ -223,23 +286,37 @@ export default function Mapa() {
           <p className="vacio">No hay check-in registrados en este periodo.</p>
         )}
 
-        {visibles.map(c => (
-          <Link key={c.id} to={`/control/${c.id}`}
-                className={'visita' + (elegido === c.id ? ' elegida' : '')}>
-            <span className="punto-estado"
-                  style={{ background: COLORES[c.estado] ?? COLORES.pendiente }} />
-            <span className="crece">
-              <span className="nombre">{c.destino_nombre}</span>
-              <span className="detalle">
-                {new Date(c.checkin_en).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                {' · '}{c.items_evaluados} de {c.items_totales}
-                {c.checkin_precision > 40 && ` · precisión ${Math.round(c.checkin_precision)} m`}
+        {lugares.map(l => (
+          <section key={l.clave}
+                   className={'lugar' + (elegido === l.clave ? ' elegido' : '')}>
+            <header onClick={() => irAlLugar(l)}>
+              <span className="punto-estado"
+                    style={{ background: COLORES[l.estado] ?? COLORES.pendiente }} />
+              <span className="crece">
+                <span className="nombre">{l.nombre}</span>
+                <span className="detalle">
+                  {l.comuna ? l.comuna + ' · ' : ''}
+                  {l.visitas.length} visita{l.visitas.length > 1 ? 's' : ''}
+                  {l.fotos > 0 && ` · ${l.fotos} foto${l.fotos > 1 ? 's' : ''}`}
+                </span>
               </span>
-            </span>
-            {c.items_criticos > 0 && (
-              <span className="chip chip-critico">{c.items_criticos}</span>
-            )}
-          </Link>
+              {l.criticos > 0 && <span className="chip chip-critico">{l.criticos}</span>}
+              {l.tipo === 'prospecto' && <span className="chip chip-diagnostico">Diagnóstico</span>}
+            </header>
+
+            {l.visitas.map(c => (
+              <Link key={c.id} to={`/control/${c.id}`} className="visita">
+                <span className="crece">
+                  <span className="detalle">
+                    {new Date(c.checkin_en).toLocaleString('es-CL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {' · '}{c.items_evaluados} de {c.items_totales}
+                    {c.checkin_precision > 40 && ` · precisión ${Math.round(c.checkin_precision)} m`}
+                  </span>
+                </span>
+                <span className="ir" aria-hidden="true">›</span>
+              </Link>
+            ))}
+          </section>
         ))}
       </div>
     </div>

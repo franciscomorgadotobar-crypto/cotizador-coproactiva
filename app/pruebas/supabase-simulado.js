@@ -68,25 +68,38 @@ const ITEMS = [
 const ahora = Date.now();
 const hace = d => new Date(ahora - d * 86400000).toISOString();
 const VISITAS = [
-  { ...CONTROL, id: 'v1', destino_nombre: 'Mirador del Parque', destino_comuna: 'Ñuñoa',
+  { ...CONTROL, id: 'v1', comunidad_id: 'com-mirador', destino_nombre: 'Mirador del Parque', destino_comuna: 'Ñuñoa',
     responsable_id: 'u3', responsable_nombre: 'Luis Cárcamo',
     estado: 'enviado', checkin_en: hace(0), checkin_lat: -33.4569, checkin_lng: -70.5975,
     checkin_precision: 8, items_evaluados: 26, items_totales: 26, items_criticos: 0, fotos: 12 },
-  { ...CONTROL, id: 'v2', destino_nombre: 'Los Almendros', destino_comuna: 'La Florida',
+  { ...CONTROL, id: 'v2', comunidad_id: 'com-almendros', destino_nombre: 'Los Almendros', destino_comuna: 'La Florida',
     responsable_id: 'u3', responsable_nombre: 'Luis Cárcamo',
     estado: 'en_curso', checkin_en: hace(2), checkin_lat: -33.5226, checkin_lng: -70.5989,
     checkin_precision: 65, items_evaluados: 8, items_totales: 26, items_criticos: 1, fotos: 4 },
-  { ...CONTROL, id: 'v3', destino_nombre: 'Costanera Norte', destino_comuna: 'Providencia',
+  { ...CONTROL, id: 'v3', comunidad_id: 'com-costanera', destino_nombre: 'Costanera Norte', destino_comuna: 'Providencia',
     responsable_id: 'u2', responsable_nombre: 'Marta Silva',
     estado: 'pausado', checkin_en: hace(9), checkin_lat: -33.4198, checkin_lng: -70.6062,
     checkin_precision: 22, items_evaluados: 11, items_totales: 26, items_criticos: 0, fotos: 7 },
-  { ...CONTROL, id: 'v4', destino_nombre: 'Las Palmeras', destino_comuna: 'Providencia',
+  { ...CONTROL, id: 'v4', comunidad_id: null, prospecto_id: PROSPECTO_ID, destino_tipo: 'prospecto', destino_nombre: 'Las Palmeras', destino_comuna: 'Providencia',
     responsable_id: null, responsable_nombre: null,
     estado: 'enviado', checkin_en: hace(40), checkin_lat: -33.4372, checkin_lng: -70.6178,
     checkin_precision: 15, items_evaluados: 26, items_totales: 26, items_criticos: 3, fotos: 21 }
 ];
+// Dos visitas más a Los Almendros: es el caso que la agrupación resuelve.
 VISITAS.push({
-  ...CONTROL, id: 'v5', destino_nombre: 'Edificio Zen', destino_comuna: 'Peñalolén',
+  ...CONTROL, id: 'v6', comunidad_id: 'com-almendros', destino_nombre: 'Los Almendros',
+  destino_comuna: 'La Florida', responsable_id: 'u3', responsable_nombre: 'Luis Cárcamo',
+  estado: 'enviado', checkin_en: hace(6), checkin_lat: -33.5231, checkin_lng: -70.5981,
+  checkin_precision: 11, items_evaluados: 26, items_totales: 26, items_criticos: 2, fotos: 9
+});
+VISITAS.push({
+  ...CONTROL, id: 'v7', comunidad_id: 'com-almendros', destino_nombre: 'Los Almendros',
+  destino_comuna: 'La Florida', responsable_id: 'u3', responsable_nombre: 'Luis Cárcamo',
+  estado: 'enviado', checkin_en: hace(20), checkin_lat: -33.5220, checkin_lng: -70.5994,
+  checkin_precision: 14, items_evaluados: 26, items_totales: 26, items_criticos: 0, fotos: 15
+});
+VISITAS.push({
+  ...CONTROL, id: 'v5', comunidad_id: 'com-zen', destino_nombre: 'Edificio Zen', destino_comuna: 'Peñalolén',
   responsable_id: null, responsable_nombre: null,
   estado: 'pendiente', checkin_en: null, checkin_lat: null, checkin_lng: null,
   items_evaluados: 0, items_totales: 26, items_criticos: 0, fotos: 0
