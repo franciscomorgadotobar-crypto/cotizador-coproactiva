@@ -166,12 +166,61 @@ export async function marcarIntento(entrada, error) {
 }
 
 /* Cuánto queda por subir. Alimenta el indicador de la interfaz: en terreno hay
- * que poder mirar el teléfono y saber si ya es seguro cerrar la app. */
+ * que poder mirar el teléfono y saber si ya es seguro cerrar la app.
+ *
+ * Las fotos se cuentan una sola vez, desde el almacén de fotos. Contarlas
+ * también desde la cola —donde tienen su propia entrada tipo 'foto' para
+ * llevarlas al servidor— las duplicaba: una foto pendiente aparecía a la vez
+ * como "1 cambio" y como "1 foto", cuando era la misma foto. */
 export async function pendientes() {
   const db = await base();
-  const [enCola, fotos] = await Promise.all([
-    db.count(ALMACENES.cola),
+  const [cola, fotos] = await Promise.all([
+    db.getAll(ALMACENES.cola),
     db.getAllFromIndex(ALMACENES.fotos, 'pendiente', 1)
   ]);
-  return { cambios: enCola, fotos: fotos.length, total: enCola + fotos.length };
+  const cambios = cola.filter(e => e.tipo !== 'foto').length;
+  return { cambios, fotos: fotos.length, total: cambios + fotos.length };
+}
+
+/* Lo mismo, pero por levantamiento: para poder decir "en el Edificio Mirador
+ * del Parque" en vez de un número suelto que no dice dónde ir a mirar.
+ *
+ * Los ítems no guardan su control_id en la entrada de cola —solo el id del
+ * ítem—, así que hay que resolverlo contra el almacén de ítems. Es la única
+ * vuelta extra; control, pausa y foto ya lo traen directo. */
+export async function pendientesPorControl() {
+  const db = await base();
+  const [cola, fotos] = await Promise.all([
+    db.getAll(ALMACENES.cola),
+    db.getAllFromIndex(ALMACENES.fotos, 'pendiente', 1)
+  ]);
+
+  const porControl = new Map();
+  function sumar(controlId, campo) {
+    if (!controlId) return;
+    if (!porControl.has(controlId)) porControl.set(controlId, { cambios: 0, fotos: 0 });
+    porControl.get(controlId)[campo]++;
+  }
+
+  for (const entrada of cola) {
+    if (entrada.tipo === 'foto') continue;
+    if (entrada.tipo === 'control') sumar(entrada.id, 'cambios');
+    else if (entrada.tipo === 'pausa') sumar(entrada.fila?.control_id, 'cambios');
+    else if (entrada.tipo === 'item') {
+      const item = await db.get(ALMACENES.items, entrada.id);
+      sumar(item?.control_id, 'cambios');
+    }
+  }
+  for (const foto of fotos) sumar(foto.control_id, 'fotos');
+
+  return [...porControl.entries()].map(([control_id, c]) => (
+    { control_id, ...c, total: c.cambios + c.fotos }
+  ));
+}
+
+/* Fotos que el teléfono cree que no ha subido. Sirve para comprobar contra el
+ * servidor si eso sigue siendo cierto: ver `reconciliarFotos` en
+ * sincronizacion.js. */
+export async function leerFotosPendientes() {
+  return (await base()).getAllFromIndex(ALMACENES.fotos, 'pendiente', 1);
 }

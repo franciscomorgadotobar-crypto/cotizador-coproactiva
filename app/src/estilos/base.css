@@ -275,6 +275,11 @@ a:hover { color: var(--pizarra); }
   color: var(--texto-apagado);
 }
 .barra-conexion .boton-texto { padding: 0; white-space: nowrap; }
+/* Cuando el aviso enlaza a un levantamiento concreto, el texto lleva a él: se
+ * subraya para que se note que es un enlace y no solo el mismo texto plano de
+ * siempre, y hereda el color de la barra en vez del naranja genérico de los
+ * enlaces, para no competir con "Subir ahora". */
+.barra-conexion a.crece { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* --------------------------------------------------------------- Categorías */
 

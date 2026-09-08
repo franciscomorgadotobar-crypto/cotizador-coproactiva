@@ -17,15 +17,19 @@ const ESTADOS = [
   ['critico', 'Crítico']
 ];
 
-/* Un punto está respondido según su tipo: los de estado por su estado, los
- * demás por tener respuesta. Mirando solo el estado, una lectura de medidor ya
- * anotada seguía contando como pendiente y el levantamiento nunca se completaba.
+/* Un punto está respondido según su tipo: los de estado por su estado, los de
+ * foto por tener una fotografía adjunta, los demás por tener respuesta.
+ *
+ * El de foto es aparte porque no escribe en `respuesta` —la fotografía misma
+ * es la respuesta—, y antes eso se leía como "siempre respondido" apenas
+ * existía el punto, sin importar si alguien había sacado la foto o no: un
+ * levantamiento podía marcarse completo con puntos de foto vacíos.
  *
  * Va fuera del componente a propósito: `categorias` la usa dentro de un useMemo,
  * que corre durante el render, así que una constante declarada más abajo estaría
  * en zona muerta y dejaría la pantalla en blanco. */
-function respondido(i) {
-  if (i.tipo_ingreso === 'foto' || i.tipo_ingreso === 'firma') return true;
+function respondido(i, tieneFoto) {
+  if (i.tipo_ingreso === 'foto') return tieneFoto(i.id);
   if (!i.tipo_ingreso || i.tipo_ingreso === 'estado') return i.estado !== 'sin_evaluar';
   return i.respuesta != null;
 }
@@ -65,7 +69,7 @@ export default function Levantamiento() {
         return;
       }
 
-      const [rc, ri, rp] = await Promise.all([
+      const [rc, ri, rp, ra] = await Promise.all([
         supabase
           .from('controles_con_avance')
           .select('id, comunidad_id, prospecto_id, estado, periodo, checkin_en, checkin_precision, creado_en, reabierto_en, motivo_reapertura, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
@@ -80,7 +84,11 @@ export default function Levantamiento() {
           .from('control_pausas')
           .select('*')
           .eq('control_id', id)
-          .order('pausado_en', { ascending: false })
+          .order('pausado_en', { ascending: false }),
+        supabase
+          .from('adjuntos')
+          .select('id, control_item_id, clase, storage_path, firmante_nombre, firmante_rut, descripcion, orden, tomada_en')
+          .eq('control_id', id)
       ]);
       if (!vigente) return;
       if (rp.data) setPausas(rp.data);
@@ -96,6 +104,43 @@ export default function Levantamiento() {
         const frescos = await leerItems(id);
         if (vigente) setItems(frescos.sort(orden));
       }
+
+      /* Las fotos que este teléfono no tomó no están en su IndexedDB: viven
+       * solo en el bucket. Sin esto, revisar un levantamiento desde otro
+       * teléfono —o el mismo, después de un tiempo— mostraba el punto
+       * marcado como evaluado pero sin ninguna fotografía que mostrar, como
+       * si se hubiera perdido evidencia que en realidad sí estaba subida. */
+      const idsLocales = new Set(f.map(x => x.id));
+      const remotas = (ra.data ?? []).filter(a => !idsLocales.has(a.id));
+      if (remotas.length) {
+        const { data: firmadas } = await supabase.storage
+          .from('evidencia')
+          .createSignedUrls(remotas.map(a => a.storage_path), 3600);
+
+        const porRuta = new Map((firmadas ?? []).map(u => [u.path, u.signedUrl]));
+        const reconstruidas = remotas
+          .filter(a => porRuta.has(a.storage_path))
+          .map(a => ({
+            id: a.id,
+            control_id: id,
+            control_item_id: a.control_item_id,
+            clase: a.clase,
+            url: porRuta.get(a.storage_path),
+            descripcion: a.descripcion,
+            firmante_nombre: a.firmante_nombre,
+            firmante_rut: a.firmante_rut,
+            orden: a.orden ?? 0,
+            tomada_en: a.tomada_en,
+            pendiente: 0
+          }));
+        if (vigente && reconstruidas.length) {
+          setFotos(xs => {
+            const ids = new Set(xs.map(x => x.id));
+            const nuevas = reconstruidas.filter(r => !ids.has(r.id));
+            return nuevas.length ? [...xs, ...nuevas] : xs;
+          });
+        }
+      }
     })().catch(e => vigente && setError(e.message));
 
     return () => { vigente = false; };
@@ -103,8 +148,22 @@ export default function Levantamiento() {
 
   const orden = (a, b) => (a.orden ?? 0) - (b.orden ?? 0);
 
+  const fotosDe = itemId => fotos
+    .filter(f => f.control_item_id === itemId && f.clase !== 'firma')
+    .sort((a, b) => a.orden - b.orden);
+
+  /* Si un punto de tipo foto está respondido: su respuesta no vive en
+   * `respuesta` como los demás tipos, es la fotografía misma. Sin esto, un
+   * punto foto se contaba como evaluado por el solo hecho de existir, aunque
+   * nadie hubiera tomado la foto. */
+  const tieneFoto = itemId => fotosDe(itemId).length > 0;
+
   /* El recorrido tiene una secuencia —se entra por el acceso y se termina en la
-   * azotea— y el orden de las categorías la refleja. */
+   * azotea— y el orden de las categorías la refleja.
+   *
+   * Depende también de `fotos`: un punto tipo foto cambia de evaluado a no
+   * evaluado según haya o no una fotografía, y sin esa dependencia el avance
+   * no se movía al sacar la foto hasta que algo más disparara el recálculo. */
   const categorias = useMemo(() => {
     const m = new Map();
     for (const it of items) {
@@ -114,26 +173,19 @@ export default function Levantamiento() {
     return [...m.entries()].map(([nombre, lista]) => ({
       nombre,
       items: lista,
-      evaluados: lista.filter(respondido).length,
+      evaluados: lista.filter(i => respondido(i, tieneFoto)).length,
       criticos: lista.filter(i => i.estado === 'critico').length
     }));
-  }, [items]);
+  }, [items, fotos]);
 
-  const evaluados = items.filter(respondido).length;
+  const evaluados = items.filter(i => respondido(i, tieneFoto)).length;
   const pct = items.length ? Math.round((evaluados / items.length) * 100) : 0;
   const faltantes = items.length - evaluados;
 
   /* La plantilla puede exigir fotografía en un punto. Esa exigencia se copió al
    * levantamiento, así que acá se puede hacer cumplir: sin la foto no se envía.
    * Una exigencia declarada que nadie aplica es peor que no tenerla. */
-  const sinFoto = items.filter(
-    i => i.requiere_foto && fotos.filter(
-      f => f.control_item_id === i.id && f.clase !== 'firma'
-    ).length === 0
-  );
-  const fotosDe = itemId => fotos
-    .filter(f => f.control_item_id === itemId && f.clase !== 'firma')
-    .sort((a, b) => a.orden - b.orden);
+  const sinFoto = items.filter(i => i.requiere_foto && !tieneFoto(i.id));
 
   // ------------------------------------------------------------- Check-in
 
@@ -248,8 +300,13 @@ export default function Levantamiento() {
   async function guardarRespuesta(item, respuesta) {
     if (respuesta?.blob) {
       const { blob, ...resto } = respuesta;
+      // Si ya había una firma para este punto, se reemplaza en el mismo
+      // registro en vez de crear uno nuevo. Con un id nuevo cada vez, firmar
+      // de nuevo por un error de trazo dejaba la firma anterior huérfana,
+      // subida igual y visible dos veces en el informe.
+      const anterior = fotos.find(f => f.control_item_id === item.id && f.clase === 'firma');
       const firma = {
-        id: nuevoId(),
+        id: anterior?.id ?? nuevoId(),
         control_id: id,
         control_item_id: item.id,
         comunidad_id: control.comunidad_id,
@@ -385,7 +442,7 @@ export default function Levantamiento() {
           config: i.config,
           respuesta: i.respuesta,
           fotos: fotosDe(i.id).map(f => ({
-            url: URL.createObjectURL(f.blob),
+            url: f.blob ? URL.createObjectURL(f.blob) : f.url,
             descripcion: f.descripcion
           }))
         }))
@@ -398,7 +455,7 @@ export default function Levantamiento() {
       firmas: fotos
         .filter(f => f.clase === 'firma')
         .map(f => ({
-          url: URL.createObjectURL(f.blob),
+          url: f.blob ? URL.createObjectURL(f.blob) : f.url,
           nombre: f.firmante_nombre,
           rut: f.firmante_rut
         }))
@@ -514,7 +571,7 @@ export default function Levantamiento() {
                 onClick={() => {
                   if (desplegada) return setAbierta(null);
                   setAbierta(cat.nombre);
-                  const pendiente = cat.items.findIndex(i => !respondido(i));
+                  const pendiente = cat.items.findIndex(i => !respondido(i, tieneFoto));
                   setPaso(pendiente === -1 ? 0 : pendiente);
                 }}
               >
@@ -559,7 +616,7 @@ export default function Levantamiento() {
                                   className={
                                     'marcador'
                                     + (i === paso ? ' aqui' : '')
-                                    + (respondido(it) ? ' hecho' : '')
+                                    + (respondido(it, tieneFoto) ? ' hecho' : '')
                                     + (it.estado === 'critico' ? ' critico' : '')
                                   }
                                   aria-label={`Ir al punto ${i + 1}`}
@@ -582,7 +639,7 @@ export default function Levantamiento() {
                                 const siguiente = categorias[i + 1];
                                 if (siguiente) {
                                   setAbierta(siguiente.nombre);
-                                  const pend = siguiente.items.findIndex(x => !respondido(x));
+                                  const pend = siguiente.items.findIndex(x => !respondido(x, tieneFoto));
                                   setPaso(pend === -1 ? 0 : pend);
                                 } else {
                                   setAbierta(null);
@@ -678,7 +735,7 @@ function Punto({ item, fotos, cerrado, onMarcar, onNota, onRespuesta, onFotos, o
       <div className="fotos-punto">
         {fotos.map(f => (
           <figure key={f.id}>
-            <img src={URL.createObjectURL(f.blob)} alt={f.descripcion || 'Fotografía'} />
+            <img src={f.blob ? URL.createObjectURL(f.blob) : f.url} alt={f.descripcion || 'Fotografía'} />
             {!f.pendiente && <span className="subida" title="Subida" />}
             <input
               type="text" defaultValue={f.descripcion ?? ''} placeholder="Pie de foto"
