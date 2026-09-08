@@ -220,13 +220,21 @@ export default function Inicio() {
   );
 }
 
-/* Sin asignar va al final: es lo que falta repartir, no el trabajo de alguien. */
+/* Sin asignar va al final: es lo que falta repartir, no el trabajo de alguien.
+ *
+ * "Sin asignar" se dice solo cuando de verdad no hay nadie asignado. Que no
+ * llegue el nombre es otra cosa —un permiso, un perfil borrado— y decir
+ * entonces "sin asignar" es afirmar algo falso sobre un levantamiento que sí
+ * tiene dueño. */
 function agrupar(lista) {
   const m = new Map();
   for (const c of lista) {
     const clave = c.responsable_id ?? 'sin-asignar';
     if (!m.has(clave)) {
-      m.set(clave, { id: clave, nombre: c.responsable_nombre ?? 'Sin asignar', items: [] });
+      const nombre = c.responsable_id
+        ? (c.responsable_nombre ?? 'Otra persona del equipo')
+        : 'Sin asignar';
+      m.set(clave, { id: clave, nombre, items: [] });
     }
     m.get(clave).items.push(c);
   }
@@ -248,9 +256,7 @@ function GrupoTrabajador({ grupo, abierto, onAlternar, puedeEditar, hechos }) {
         <span className="crece">{grupo.nombre}</span>
         {criticos > 0 && <span className="punto-critico" aria-label="Tiene críticos" />}
         <span className="micro">
-          {cuantos} {hechos
-            ? (cuantos > 1 ? 'realizados' : 'realizado')
-            : (cuantos > 1 ? 'pendientes' : 'pendiente')}
+          {cuantos} {hechos ? (cuantos > 1 ? 'realizados' : 'realizado') : 'por hacer'}
         </span>
         <span className="flecha" aria-hidden="true">{abierto ? '−' : '+'}</span>
       </button>

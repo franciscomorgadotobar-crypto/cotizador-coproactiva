@@ -105,6 +105,13 @@ VISITAS.push({
   items_evaluados: 0, items_totales: 26, items_criticos: 0, fotos: 0
 });
 
+VISITAS.push({
+  ...CONTROL, id: 'v8', destino_nombre: 'Torre Poniente', destino_comuna: 'Ñuñoa',
+  responsable_id: 'u9', responsable_nombre: null,
+  estado: 'pendiente', checkin_en: null, checkin_lat: null, checkin_lng: null,
+  items_evaluados: 0, items_totales: 12, items_criticos: 0, fotos: 0
+});
+
 const TABLAS = {
   perfiles: EQUIPO,
   perfil_comunidades: [{ perfil_id: 'u2', comunidad_id: COMUNIDAD_ID }],
