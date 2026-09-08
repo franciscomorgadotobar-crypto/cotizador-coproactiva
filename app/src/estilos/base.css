@@ -576,6 +576,17 @@ a:hover { color: var(--pizarra); }
   color: var(--texto-apagado);
 }
 
+/* El nombre de la plantilla, como tipo de levantamiento. Neutro a propósito:
+   no informa un estado como los demás chips, solo clasifica. */
+.chip-tipo {
+  background: var(--tarjeta);
+  border-color: var(--borde);
+  color: var(--texto-tenue);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .acceso-principal {
   background: var(--tinta);
   border-color: var(--tinta);

@@ -8,6 +8,7 @@ import Plantillas from './paginas/panel/Plantillas';
 import EditorPlantilla from './paginas/panel/Plantilla';
 import Programar from './paginas/panel/Programar';
 import Equipo from './paginas/panel/Equipo';
+import Historico from './paginas/panel/Historico';
 
 /* El mapa se carga aparte: Leaflet y sus estilos pesan, y no tienen por qué
  * viajar en el paquete que abre quien solo va a terreno. */
@@ -42,6 +43,7 @@ export default function App() {
       <Route path="/plantillas" element={<Privada><Plantillas /></Privada>} />
       <Route path="/plantillas/:id" element={<Privada><EditorPlantilla /></Privada>} />
       <Route path="/equipo" element={<Privada><Equipo /></Privada>} />
+      <Route path="/historico" element={<Privada><Historico /></Privada>} />
       <Route path="/mapa" element={
         <Privada>
           <Suspense fallback={<p className="cargando">Cargando el mapa…</p>}>

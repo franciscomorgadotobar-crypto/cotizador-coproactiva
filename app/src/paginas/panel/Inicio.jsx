@@ -42,7 +42,7 @@ export default function Inicio() {
 
     supabase
       .from('controles_con_avance')
-      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, checkin_en, checkin_lat, checkin_lng, responsable_id, responsable_nombre, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
+      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, checkin_en, checkin_lat, checkin_lng, responsable_id, responsable_nombre, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo, plantilla_nombre')
       .order('programado_para', { ascending: true })
       .then(({ data, error }) => {
         if (!vigente) return;
@@ -176,6 +176,14 @@ export default function Inicio() {
                 </div>
               )}
             </div>
+
+            {/* Página aparte y no una sección más: consultar el historial de
+                una comunidad es una pregunta distinta a la del día a día que
+                resuelve el resto del inicio. */}
+            <Link to="/historico" className="acceso">
+              <span className="crece">Histórico por comunidad</span>
+              <span aria-hidden="true">›</span>
+            </Link>
           </>
         )}
 
@@ -274,7 +282,7 @@ function Tarjeta({ c, puedeEditar }) {
 
   return (
     <article className="tarjeta" style={{ padding: 16, marginBottom: 12 }}>
-      <div className="fila" style={{ marginBottom: 8 }}>
+      <div className="fila" style={{ marginBottom: 8, flexWrap: 'wrap', rowGap: 6 }}>
         <span className="etiqueta-campo crece" style={{ margin: 0 }}>
           {c.enviado_en
             ? new Date(c.enviado_en).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
@@ -282,6 +290,12 @@ function Tarjeta({ c, puedeEditar }) {
               ? new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
               : c.periodo ?? ''}
         </span>
+        {/* El nombre de la plantilla usada ya distingue el tipo de
+            levantamiento —incidencia, control mensual, registro— sin
+            necesidad de un campo aparte. */}
+        {c.plantilla_nombre && (
+          <span className="chip chip-tipo">{c.plantilla_nombre}</span>
+        )}
         {c.destino_tipo === 'prospecto' && (
           <span className="chip chip-diagnostico">Diagnóstico</span>
         )}

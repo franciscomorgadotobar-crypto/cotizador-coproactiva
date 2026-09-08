@@ -115,7 +115,15 @@ VISITAS.push({
 const TABLAS = {
   perfiles: EQUIPO,
   perfil_comunidades: [{ perfil_id: 'u2', comunidad_id: COMUNIDAD_ID }],
-  comunidades: [{ id: COMUNIDAD_ID, nombre: 'Edificio de prueba', comuna: 'San Bernardo' }],
+  // Las mismas comunidades que aparecen en VISITAS, para poder probar el
+  // histórico agrupado por comunidad sin datos huérfanos.
+  comunidades: [
+    { id: COMUNIDAD_ID, nombre: 'Edificio de prueba', comuna: 'San Bernardo' },
+    { id: 'com-mirador', nombre: 'Mirador del Parque', comuna: 'Ñuñoa' },
+    { id: 'com-almendros', nombre: 'Los Almendros', comuna: 'La Florida' },
+    { id: 'com-costanera', nombre: 'Costanera Norte', comuna: 'Providencia' },
+    { id: 'com-zen', nombre: 'Edificio Zen', comuna: 'Peñalolén' }
+  ],
   prospectos: [{ id: PROSPECTO_ID, nombre_condominio: 'Las Palmeras', comuna: 'Providencia', etapa: 'diagnostico' }],
   controles: [CONTROL],
   controles_con_avance: VISITAS,
@@ -139,6 +147,10 @@ function consulta(tabla) {
       if (filas.length && columna in (filas[0] ?? {})) {
         filas = filas.filter(f => f[columna] === valor);
       }
+      return api;
+    },
+    neq: (columna, valor) => {
+      filas = filas.filter(f => f[columna] !== valor);
       return api;
     },
     not: () => api,
