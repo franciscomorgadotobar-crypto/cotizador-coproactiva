@@ -79,13 +79,16 @@ export function vigencia(horas: number) {
   return `${horas} horas`;
 }
 
-/* La dirección no se imprime a la vista.
+/* El botón es la única salida, y con eso basta.
  *
- * Antes iba completa abajo, de respaldo por si el botón no se pintaba. Pero
- * delata dónde está alojado el sistema y se lee como algo improvisado, que no
- * es la primera impresión que corresponde. El respaldo sigue existiendo —el
- * mismo enlace, detrás de un texto— y quien reciba el correo en texto plano
- * igual recibe la dirección entera, porque ahí no hay dónde esconderla.
+ * Antes iba además la dirección completa al pie, por si el botón no se
+ * pintaba. No hace falta: el botón es una celda de tabla con fondo y texto
+ * dentro, que es lo que aguanta en todos los clientes de correo —no depende
+ * de imágenes, ni de CSS que alguien bloquee, ni de fuentes que no lleguen—.
+ * Y esa dirección al pie delataba dónde está alojado el sistema.
+ *
+ * Quien reciba el correo en texto plano igual recibe la dirección entera,
+ * porque ahí no hay botón que valga.
  */
 function plantilla(o: {
   titulo: string; saludo: string; parrafo: string; boton: string; enlace: string;
@@ -119,13 +122,6 @@ function plantilla(o: {
 
         <tr><td style="padding:20px 28px 0;">
           <p style="margin:0;font:400 13.5px/1.6 Helvetica,Arial,sans-serif;color:#2b3138;">${o.cierre}</p>
-        </td></tr>
-
-        <tr><td style="padding:22px 28px 0;">
-          <p style="margin:0;font:400 12.5px/1.6 Helvetica,Arial,sans-serif;color:#4a5a68;">
-            ¿No se ve el botón?
-            <a href="${escapar(o.enlace)}" style="color:#2b3138;font-weight:700;text-decoration:underline;">Abre tu enlace de acceso</a>.
-          </p>
         </td></tr>
 
         <tr><td style="padding:24px 28px 28px;">
