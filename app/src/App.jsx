@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { useSesion } from './lib/sesion';
 import Ingreso from './paginas/Ingreso';
+import Clave from './paginas/Clave';
 import Inicio from './paginas/panel/Inicio';
 import Plantillas from './paginas/panel/Plantillas';
 import EditorPlantilla from './paginas/panel/Plantilla';
@@ -29,6 +30,8 @@ export default function App() {
   const { sesion } = useSesion();
   return (
     <Routes>
+      {/* Fuera de Privada: se llega con un enlace, no con sesión iniciada. */}
+      <Route path="/clave" element={<Clave />} />
       <Route path="/ingreso" element={sesion ? <Navigate to="/" replace /> : <Ingreso />} />
       <Route path="/" element={<Privada><Inicio /></Privada>} />
       <Route path="/plantillas" element={<Privada><Plantillas /></Privada>} />

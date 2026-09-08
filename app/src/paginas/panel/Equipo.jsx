@@ -37,13 +37,14 @@ export default function Equipo() {
   // null = todavía no se sabe. Se consulta al servidor porque la clave del
   // correo vive ahí; el navegador no tiene cómo saberlo por su cuenta.
   const [correoListo, setCorreoListo] = useState(null);
+  const [horas, setHoras] = useState(24);
 
   const esSuperadmin = perfil?.rol === 'superadmin';
 
   useEffect(() => {
     cargar();
     servidor({ accion: 'estado' })
-      .then(r => setCorreoListo(Boolean(r.correo)))
+      .then(r => { setCorreoListo(Boolean(r.correo)); if (r.horas) setHoras(r.horas); })
       .catch(() => setCorreoListo(false));
   }, []);
 
@@ -121,16 +122,22 @@ export default function Equipo() {
     setOcupado(false);
   }
 
-  async function cambiarClave(persona) {
-    const clave = prompt(`Nueva contraseña para ${persona.nombre} (mínimo 8 caracteres)`);
-    if (!clave) return;
+  /* Ni acá ni en el servidor se escribe una contraseña ajena: se manda un enlace
+   * de un solo uso y esa persona define la suya. Sirve igual para una invitación
+   * que venció sin usarse y para alguien que perdió su clave. */
+  async function reenviarAcceso(persona) {
+    if (!confirm(
+      `Se le enviará a ${persona.email} un enlace para crear una contraseña nueva. ` +
+      'El enlace anterior, si lo había, deja de servir.'
+    )) return;
+
     setOcupado(true);
     setError(null);
     try {
-      const r = await servidor({ accion: 'clave', id: persona.id, clave, avisar: true });
+      const r = await servidor({ accion: 'reenviar', id: persona.id });
       setAviso(r.correo?.enviado
-        ? `Contraseña cambiada. Se le avisó por correo a ${persona.email}.`
-        : `Contraseña cambiada. Entrégasela a ${persona.nombre}: el correo no salió.`);
+        ? `Enlace enviado a ${persona.email}. Vence en ${horas} horas.`
+        : `No se pudo enviar el correo: ${r.correo?.motivo ?? 'sin detalle'}`);
     } catch (e) { setError(e.message); }
     setOcupado(false);
   }
@@ -163,9 +170,9 @@ export default function Equipo() {
         )}
 
         {correoListo === false && (
-          <div className="aviso" style={{ marginBottom: 12 }}>
-            El envío de correo no está configurado, así que las cuentas nuevas se
-            crean igual pero la contraseña la entregas tú.
+          <div className="aviso aviso-critico" style={{ marginBottom: 12 }}>
+            El envío de correo no está configurado. Sin él no hay cómo entregar el
+            enlace de acceso, así que no se pueden dar de alta usuarios todavía.
           </div>
         )}
 
@@ -185,8 +192,8 @@ export default function Equipo() {
                 // no haya salido deja a la persona esperando un correo que no
                 // existe y a nadie entregándole la clave.
                 setAviso(r.correo?.enviado
-                  ? `${datos.nombre} ya puede entrar. Le llegó un correo a ${datos.email} con sus accesos.`
-                  : `${datos.nombre} ya puede entrar, pero el correo no salió (${r.correo?.motivo ?? 'sin detalle'}). Entrégale tú la contraseña.`);
+                  ? `Invitación enviada a ${datos.email}. Tiene ${horas} horas para crear su contraseña.`
+                  : `La cuenta quedó creada, pero el correo no salió (${r.correo?.motivo ?? 'sin detalle'}). Usa "Reenviar acceso" cuando esté resuelto.`);
                 await cargar();
               } catch (e) { setError(e.message); }
               setOcupado(false);
@@ -275,9 +282,10 @@ export default function Equipo() {
                   )}
 
                   <div className="fila" style={{ gap: 8, marginTop: 12 }}>
-                    <button className="boton boton-secundario crece" disabled={bloqueada || ocupado}
-                            onClick={() => cambiarClave(persona)}>
-                      Cambiar clave
+                    <button className="boton boton-secundario crece"
+                            disabled={bloqueada || ocupado || !persona.activo}
+                            onClick={() => reenviarAcceso(persona)}>
+                      Reenviar acceso
                     </button>
                     <button className="boton boton-secundario crece"
                             disabled={bloqueada || ocupado || yo}
@@ -298,7 +306,7 @@ export default function Equipo() {
 
 function Alta({ comunidades, esSuperadmin, correoListo, onCrear, onCancelar }) {
   const [datos, setDatos] = useState({
-    nombre: '', email: '', rol: 'terreno', clave: '', comunidades: []
+    nombre: '', email: '', rol: 'terreno', comunidades: []
   });
 
   const necesitaComunidades = datos.rol === 'jefatura' || datos.rol === 'terreno';
@@ -357,25 +365,17 @@ function Alta({ comunidades, esSuperadmin, correoListo, onCrear, onCancelar }) {
         </div>
       )}
 
-      <div className="campo">
-        <label className="etiqueta-campo" htmlFor="clave-nueva">Contraseña inicial</label>
-        <input id="clave-nueva" type="text" value={datos.clave}
-               placeholder="Mínimo 8 caracteres"
-               onChange={e => setDatos({ ...datos, clave: e.target.value })} />
-        <p className="micro apagado" style={{ margin: '5px 0 0' }}>
-          {correoListo
-            ? 'Se le envía por correo junto con el enlace de la app. Va visible acá por si el correo no llega.'
-            : 'Se la entregas tú. Va visible a propósito: si no puedes leerla, no puedes dictarla.'}
-          {' '}Pídele que la cambie al entrar.
-        </p>
-      </div>
+      <p className="micro apagado" style={{ margin: '0 0 14px' }}>
+        No se define contraseña acá. Le llega un enlace de un solo uso para que
+        cree la suya, y nadie más llega a conocerla.
+      </p>
 
       <div className="fila" style={{ gap: 8, marginTop: 6 }}>
         <button className="boton boton-secundario crece" onClick={onCancelar}>Cancelar</button>
         <button className="boton crece"
-                disabled={!datos.nombre || !datos.email || datos.clave.length < 8}
+                disabled={!datos.nombre || !datos.email.includes('@') || correoListo === false}
                 onClick={() => onCrear(datos)}>
-          Crear
+          Crear e invitar
         </button>
       </div>
     </div>

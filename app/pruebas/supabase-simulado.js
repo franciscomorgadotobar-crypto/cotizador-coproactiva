@@ -127,6 +127,13 @@ export const supabase = {
     }),
     onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
     signInWithPassword: () => Promise.resolve({ error: null }),
+    // El token 'vencido' simula un enlace ya usado o caducado.
+    verifyOtp: ({ token_hash }) => Promise.resolve(
+      token_hash === 'vencido'
+        ? { data: null, error: { message: 'Token has expired or is invalid' } }
+        : { data: { session: {} }, error: null }
+    ),
+    updateUser: (datos) => { registrar('updateUser', 'auth', datos); return Promise.resolve({ error: null }); },
     signOut: () => Promise.resolve({ error: null })
   },
   storage: {
