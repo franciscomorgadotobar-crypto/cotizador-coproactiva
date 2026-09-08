@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSesion } from '../../lib/sesion';
 import { AvisoConexion } from '../../lib/estado';
+import MapaPrevio from '../../componentes/MapaPrevio';
 import { hayConexion } from '../../lib/sincronizacion';
 import { leerControles, guardarControl } from '../../lib/local';
 
@@ -18,6 +19,7 @@ export default function Inicio() {
   const { perfil, salir } = useSesion();
   const [controles, setControles] = useState(null);
   const [error, setError] = useState(null);
+  const [ajustes, setAjustes] = useState(false);
 
   const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
   // Jefatura arma plantillas y programa visitas, pero no da de alta usuarios.
@@ -35,7 +37,7 @@ export default function Inicio() {
 
     supabase
       .from('controles_con_avance')
-      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, checkin_en, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
+      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, checkin_en, checkin_lat, checkin_lng, responsable_id, responsable_nombre, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo')
       .order('programado_para', { ascending: true })
       .then(({ data, error }) => {
         if (!vigente) return;
@@ -74,6 +76,27 @@ export default function Inicio() {
   const abiertos = controles?.filter(c => c.estado !== 'enviado' && c.estado !== 'anulado') ?? [];
   const cerrados = controles?.filter(c => c.estado === 'enviado') ?? [];
 
+  /* El trabajo pendiente se agrupa por persona. Una lista plana no responde la
+   * pregunta que importa al mirar el día: quién va sobrecargado y quién tiene
+   * hueco. Sin asignar va al final, porque es lo que hay que repartir. */
+  const porTrabajador = useMemo(() => {
+    const m = new Map();
+    for (const c of abiertos) {
+      const clave = c.responsable_id ?? 'sin-asignar';
+      if (!m.has(clave)) {
+        m.set(clave, {
+          id: clave,
+          nombre: c.responsable_nombre ?? 'Sin asignar',
+          items: []
+        });
+      }
+      m.get(clave).items.push(c);
+    }
+    return [...m.values()].sort((a, b) =>
+      a.id === 'sin-asignar' ? 1 : b.id === 'sin-asignar' ? -1
+        : a.nombre.localeCompare(b.nombre, 'es'));
+  }, [controles]);
+
   const hoy = new Date().toLocaleDateString('es-CL', {
     weekday: 'long', day: 'numeric', month: 'long'
   });
@@ -96,6 +119,11 @@ export default function Inicio() {
 
       <div className="cuerpo">
         {error && <div className="aviso aviso-critico">{error}</div>}
+
+        {/* El mapa primero: antes de saber cuánto falta, importa dónde está. */}
+        {controles?.some(c => c.checkin_lat != null) && (
+          <MapaPrevio controles={controles} />
+        )}
 
         {/* Resumen de los últimos 30 días */}
         {resumen && (
@@ -125,20 +153,22 @@ export default function Inicio() {
               <span className="crece">Nuevo levantamiento</span>
               <span aria-hidden="true">+</span>
             </Link>
-            <Link to="/plantillas" className="acceso">
-              <span className="crece">Plantillas</span>
-              <span aria-hidden="true">›</span>
-            </Link>
-            <Link to="/mapa" className="acceso">
-              <span className="crece">Mapa de terreno</span>
-              <span aria-hidden="true">›</span>
-            </Link>
-            {esAdministracion && (
-              <Link to="/equipo" className="acceso">
-                <span className="crece">Equipo</span>
-                <span aria-hidden="true">›</span>
-              </Link>
-            )}
+
+            {/* Plantillas y equipo se tocan poco y no son trabajo del día:
+                agrupadas ocupan una línea en vez de tres. */}
+            <div className={'configuracion' + (ajustes ? ' abierta' : '')}>
+              <button type="button" className="acceso" aria-expanded={ajustes}
+                      onClick={() => setAjustes(v => !v)}>
+                <span className="crece">Configuración</span>
+                <span aria-hidden="true">{ajustes ? '−' : '+'}</span>
+              </button>
+              {ajustes && (
+                <div className="dentro">
+                  <Link to="/plantillas">Plantillas de levantamiento</Link>
+                  {esAdministracion && <Link to="/equipo">Equipo y permisos</Link>}
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -148,9 +178,22 @@ export default function Inicio() {
 
         {controles === null && !error && <p className="cargando">Cargando…</p>}
         {controles && abiertos.length === 0 && (
-          <p className="vacio">No tienes levantamientos pendientes.</p>
+          <p className="vacio">No hay levantamientos pendientes.</p>
         )}
-        {abiertos.map(c => <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />)}
+
+        {porTrabajador.map(grupo => (
+          <div key={grupo.id} className="grupo-trabajador">
+            <div className="cabecera-trabajador">
+              <span className="crece">{grupo.nombre}</span>
+              <span className="micro">
+                {grupo.items.length} pendiente{grupo.items.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            {grupo.items.map(c => (
+              <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />
+            ))}
+          </div>
+        ))}
 
         {cerrados.length > 0 && (
           <>
