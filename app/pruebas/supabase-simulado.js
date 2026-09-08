@@ -178,6 +178,18 @@ export const supabase = {
     updateUser: (datos) => { registrar('updateUser', 'auth', datos); return Promise.resolve({ error: null }); },
     signOut: () => Promise.resolve({ error: null })
   },
+  // La función de acceso público responde siempre lo mismo, exista o no el
+  // correo. El simulado copia esa respuesta para que la pantalla se pruebe
+  // contra lo que de verdad va a recibir.
+  functions: {
+    invoke: (nombre, opciones) => {
+      registrar('funcion', nombre, opciones?.body);
+      return Promise.resolve({
+        data: { ok: true, mensaje: 'Si esa dirección está registrada, le llegará un enlace en unos minutos.' },
+        error: null
+      });
+    }
+  },
   storage: {
     from: () => ({
       upload: (ruta) => {
