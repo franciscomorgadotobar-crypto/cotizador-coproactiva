@@ -627,3 +627,104 @@ a:hover { color: var(--pizarra); }
   color: var(--texto-cuerpo);
   word-break: break-all;
 }
+
+/* ------------------------------------------- Recorrido dentro de una categoría */
+
+.pasos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.pasos .boton { min-height: var(--tactil); padding: 0 12px; white-space: nowrap; }
+.pasos .conteo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.pasos .conteo > span {
+  font: 600 10px/1 var(--fuente-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+/* Marcas del recorrido. Sirven para dos cosas: ver cuánto queda y saltar a un
+   punto concreto sin pasar por todos los del medio. */
+.marcadores { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.marcador {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 1px solid var(--borde);
+  border-radius: 50%;
+  background: var(--tarjeta);
+  cursor: pointer;
+}
+.marcador.hecho   { background: var(--ok-texto); border-color: var(--ok-texto); }
+.marcador.critico { background: var(--critico-texto); border-color: var(--critico-texto); }
+.marcador.aqui    { transform: scale(1.5); border-color: var(--naranja); border-width: 1.5px; }
+
+/* --------------------------------------------------------------------- Mapa */
+
+.pantalla-mapa { display: flex; flex-direction: column; }
+
+.filtros-rango { display: flex; gap: 6px; flex-wrap: wrap; }
+.filtros-rango button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--borde);
+  border-radius: 17px;
+  background: var(--tarjeta);
+  font: 600 10px/1 var(--fuente-display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--texto-apagado);
+  cursor: pointer;
+}
+.filtros-rango button.activo {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  color: var(--texto-inverso);
+}
+
+/* El mapa ocupa una franja fija y la lista se desplaza debajo. A pantalla
+   completa con el panel encima, en un teléfono no queda mapa visible. */
+.lienzo-mapa {
+  height: 42vh;
+  min-height: 240px;
+  background: var(--niebla);
+}
+.pin-vacio { background: none; border: none; }
+.leaflet-container { font-family: var(--fuente-cuerpo); }
+
+.panel-mapa {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px 24px;
+  background: var(--fondo-app);
+}
+
+.visita {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  color: inherit;
+  text-decoration: none;
+}
+.visita.elegida { border-color: var(--naranja); }
+.visita .punto-estado { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.visita .nombre { display: block; font-size: 13.5px; font-weight: 600; color: var(--texto-titulo); }
+.visita .detalle {
+  display: block;
+  margin-top: 2px;
+  font: 400 11px/1.4 var(--fuente-cuerpo);
+  color: var(--texto-tenue);
+}

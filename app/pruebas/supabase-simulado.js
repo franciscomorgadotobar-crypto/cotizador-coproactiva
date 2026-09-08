@@ -63,13 +63,32 @@ const ITEMS = [
     config: { min: 1, max: 10 }, requiere_foto: false }
 ];
 
+/* Check-ins repartidos por Santiago, con estados y fechas distintas para poder
+ * ejercitar los filtros del mapa. */
+const ahora = Date.now();
+const hace = d => new Date(ahora - d * 86400000).toISOString();
+const VISITAS = [
+  { ...CONTROL, id: 'v1', destino_nombre: 'Mirador del Parque', destino_comuna: 'Ñuñoa',
+    estado: 'enviado', checkin_en: hace(0), checkin_lat: -33.4569, checkin_lng: -70.5975,
+    checkin_precision: 8, items_evaluados: 26, items_totales: 26, items_criticos: 0, fotos: 12 },
+  { ...CONTROL, id: 'v2', destino_nombre: 'Los Almendros', destino_comuna: 'La Florida',
+    estado: 'en_curso', checkin_en: hace(2), checkin_lat: -33.5226, checkin_lng: -70.5989,
+    checkin_precision: 65, items_evaluados: 8, items_totales: 26, items_criticos: 1, fotos: 4 },
+  { ...CONTROL, id: 'v3', destino_nombre: 'Costanera Norte', destino_comuna: 'Providencia',
+    estado: 'pausado', checkin_en: hace(9), checkin_lat: -33.4198, checkin_lng: -70.6062,
+    checkin_precision: 22, items_evaluados: 11, items_totales: 26, items_criticos: 0, fotos: 7 },
+  { ...CONTROL, id: 'v4', destino_nombre: 'Las Palmeras', destino_comuna: 'Providencia',
+    estado: 'enviado', checkin_en: hace(40), checkin_lat: -33.4372, checkin_lng: -70.6178,
+    checkin_precision: 15, items_evaluados: 26, items_totales: 26, items_criticos: 3, fotos: 21 }
+];
+
 const TABLAS = {
   perfiles: EQUIPO,
   perfil_comunidades: [{ perfil_id: 'u2', comunidad_id: COMUNIDAD_ID }],
   comunidades: [{ id: COMUNIDAD_ID, nombre: 'Edificio de prueba', comuna: 'San Bernardo' }],
   prospectos: [{ id: PROSPECTO_ID, nombre_condominio: 'Las Palmeras', comuna: 'Providencia', etapa: 'diagnostico' }],
   controles: [CONTROL],
-  controles_con_avance: [CONTROL],
+  controles_con_avance: VISITAS,
   control_items: ITEMS,
   control_pausas: [],
   plantillas_control: [{ id: 'pl1', nombre: 'Control mensual', activa: true, plantilla_items: [{ count: 4 }] }],

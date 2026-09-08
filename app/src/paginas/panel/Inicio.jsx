@@ -129,6 +129,10 @@ export default function Inicio() {
               <span className="crece">Plantillas</span>
               <span aria-hidden="true">›</span>
             </Link>
+            <Link to="/mapa" className="acceso">
+              <span className="crece">Mapa de terreno</span>
+              <span aria-hidden="true">›</span>
+            </Link>
             {esAdministracion && (
               <Link to="/equipo" className="acceso">
                 <span className="crece">Equipo</span>

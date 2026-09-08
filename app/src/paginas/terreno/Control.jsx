@@ -42,6 +42,7 @@ export default function Levantamiento() {
   const [ubicando, setUbicando] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [abierta, setAbierta] = useState(null);   // categoría desplegada
+  const [paso, setPaso] = useState(0);            // punto en curso dentro de ella
   const [pausas, setPausas] = useState([]);
 
   /* Primero el teléfono, después el servidor. Al revés, entrar a un
@@ -510,7 +511,12 @@ export default function Levantamiento() {
                 type="button"
                 className={'categoria-titulo' + (desplegada ? ' abierta' : '')}
                 aria-expanded={desplegada}
-                onClick={() => setAbierta(desplegada ? null : cat.nombre)}
+                onClick={() => {
+                  if (desplegada) return setAbierta(null);
+                  setAbierta(cat.nombre);
+                  const pendiente = cat.items.findIndex(i => !respondido(i));
+                  setPaso(pendiente === -1 ? 0 : pendiente);
+                }}
               >
                 <span className="crece">{cat.nombre}</span>
                 {cat.criticos > 0 && <span className="punto-critico" aria-label="Tiene críticos" />}
@@ -518,20 +524,78 @@ export default function Levantamiento() {
                 <span className="flecha" aria-hidden="true">{desplegada ? '−' : '+'}</span>
               </button>
 
-              {desplegada && cat.items.map(item => (
-                <Punto
-                  key={item.id}
-                  item={item}
-                  fotos={fotosDe(item.id)}
-                  cerrado={cerrado}
-                  onMarcar={marcar}
-                  onNota={guardarNota}
-                  onRespuesta={guardarRespuesta}
-                  onFotos={agregarFotos}
-                  onDescribir={describirFoto}
-                  onQuitar={quitarFoto}
-                />
-              ))}
+              {/* Un punto a la vez. Con siete preguntas apiladas se pierde de
+                  vista dónde va uno, y en una pantalla de teléfono la lista se
+                  hace interminable. */}
+              {desplegada && cat.items[paso] && (
+                <>
+                  <Punto
+                    key={cat.items[paso].id}
+                    item={cat.items[paso]}
+                    fotos={fotosDe(cat.items[paso].id)}
+                    cerrado={cerrado}
+                    onMarcar={marcar}
+                    onNota={guardarNota}
+                    onRespuesta={guardarRespuesta}
+                    onFotos={agregarFotos}
+                    onDescribir={describirFoto}
+                    onQuitar={quitarFoto}
+                  />
+
+                  <nav className="pasos" aria-label={`Punto ${paso + 1} de ${cat.items.length}`}>
+                    <button type="button" className="boton boton-secundario"
+                            disabled={paso === 0}
+                            onClick={() => setPaso(p => p - 1)}>
+                      ‹ Anterior
+                    </button>
+
+                    <div className="conteo">
+                      <span>{paso + 1} de {cat.items.length}</span>
+                      {/* Marcas del recorrido: se ve de un vistazo qué queda
+                          pendiente dentro de la categoría y se salta ahí. */}
+                      <div className="marcadores">
+                        {cat.items.map((it, i) => (
+                          <button key={it.id} type="button"
+                                  className={
+                                    'marcador'
+                                    + (i === paso ? ' aqui' : '')
+                                    + (respondido(it) ? ' hecho' : '')
+                                    + (it.estado === 'critico' ? ' critico' : '')
+                                  }
+                                  aria-label={`Ir al punto ${i + 1}`}
+                                  onClick={() => setPaso(i)} />
+                        ))}
+                      </div>
+                    </div>
+
+                    {paso < cat.items.length - 1 ? (
+                      <button type="button" className="boton"
+                              onClick={() => setPaso(p => p + 1)}>
+                        Siguiente ›
+                      </button>
+                    ) : (
+                      /* En el último punto, avanzar salta a la categoría
+                         siguiente: el recorrido continúa sin volver a la lista. */
+                      <button type="button" className="boton"
+                              onClick={() => {
+                                const i = categorias.findIndex(c => c.nombre === cat.nombre);
+                                const siguiente = categorias[i + 1];
+                                if (siguiente) {
+                                  setAbierta(siguiente.nombre);
+                                  const pend = siguiente.items.findIndex(x => !respondido(x));
+                                  setPaso(pend === -1 ? 0 : pend);
+                                } else {
+                                  setAbierta(null);
+                                }
+                              }}>
+                        {categorias.findIndex(c => c.nombre === cat.nombre) < categorias.length - 1
+                          ? 'Categoría siguiente ›'
+                          : 'Terminar ›'}
+                      </button>
+                    )}
+                  </nav>
+                </>
+              )}
             </section>
           );
         })}
