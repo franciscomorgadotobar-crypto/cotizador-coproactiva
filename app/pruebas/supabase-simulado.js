@@ -63,7 +63,10 @@ const ITEMS = [
     config: { unidad: 'm³' }, requiere_foto: false },
   { id: 'i4', grupo: 'Instalaciones', texto: 'Estado de la fachada', orden: 3,
     estado: 'sin_evaluar', nota: null, respuesta: null, tipo_ingreso: 'escala',
-    config: { min: 1, max: 10 }, requiere_foto: false }
+    config: { min: 1, max: 10 }, requiere_foto: false },
+  { id: 'i5', grupo: 'Azotea', texto: 'Estanque de agua', orden: 4,
+    estado: 'sin_evaluar', nota: null, respuesta: null, tipo_ingreso: 'estado',
+    config: {}, requiere_foto: false }
 ];
 
 /* Check-ins repartidos por Santiago, con estados y fechas distintas para poder

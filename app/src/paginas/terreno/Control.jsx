@@ -180,6 +180,30 @@ export default function Levantamiento() {
 
   const evaluados = items.filter(i => respondido(i, tieneFoto)).length;
   const pct = items.length ? Math.round((evaluados / items.length) * 100) : 0;
+
+  /* Con la plantilla en modo secuencial no basta con impedir saltar puntos
+   * dentro de una categoría: hay que impedir abrir una categoría posterior
+   * mientras quede algo pendiente en una anterior. Esta es esa primera
+   * categoría con algo por responder —o -1 si ya está todo evaluado—. */
+  const primeraCategoriaPendiente = useMemo(
+    () => categorias.findIndex(cat => cat.evaluados < cat.items.length),
+    [categorias]
+  );
+
+  // Al entrar a un levantamiento secuencial, partir directo en esa primera
+  // categoría pendiente en vez de dejar todo plegado. Solo una vez: después
+  // de eso el usuario manda sobre qué categoría (ya desbloqueada) mirar.
+  const partioSecuencial = useRef(false);
+  useEffect(() => {
+    if (partioSecuencial.current) return;
+    if (!control?.secuencial || categorias.length === 0) return;
+    partioSecuencial.current = true;
+    const i = primeraCategoriaPendiente === -1 ? 0 : primeraCategoriaPendiente;
+    const cat = categorias[i];
+    setAbierta(cat.nombre);
+    const pendiente = cat.items.findIndex(it => !respondido(it, tieneFoto));
+    setPaso(pendiente === -1 ? 0 : pendiente);
+  }, [control, categorias, primeraCategoriaPendiente, fotos]);
   const faltantes = items.length - evaluados;
 
   /* Lo que de verdad impide enviar. `faltantes` cuenta todo —incluye lo
@@ -582,15 +606,23 @@ export default function Levantamiento() {
 
         {/* Categorías plegadas: con veinte o treinta puntos, una lista corrida
             obliga a desplazarse a ciegas buscando dónde se quedó uno. */}
-        {categorias.map(cat => {
+        {categorias.map((cat, indiceCategoria) => {
           const desplegada = abierta === cat.nombre;
+          // Bloqueada: hay una categoría anterior sin terminar y la plantilla
+          // exige orden. Volver a una ya vista para corregirla sigue libre.
+          const bloqueada = control.secuencial
+            && primeraCategoriaPendiente !== -1
+            && indiceCategoria > primeraCategoriaPendiente;
           return (
             <section key={cat.nombre} className="categoria">
               <button
                 type="button"
-                className={'categoria-titulo' + (desplegada ? ' abierta' : '')}
+                className={'categoria-titulo' + (desplegada ? ' abierta' : '') + (bloqueada ? ' bloqueada' : '')}
                 aria-expanded={desplegada}
+                disabled={bloqueada}
+                title={bloqueada ? 'Termina las categorías anteriores primero' : undefined}
                 onClick={() => {
+                  if (bloqueada) return;
                   if (desplegada) return setAbierta(null);
                   setAbierta(cat.nombre);
                   const pendiente = cat.items.findIndex(i => !respondido(i, tieneFoto));
@@ -600,7 +632,7 @@ export default function Levantamiento() {
                 <span className="crece">{cat.nombre}</span>
                 {cat.criticos > 0 && <span className="punto-critico" aria-label="Tiene críticos" />}
                 <span className="micro">{cat.evaluados}/{cat.items.length}</span>
-                <span className="flecha" aria-hidden="true">{desplegada ? '−' : '+'}</span>
+                <span className="flecha" aria-hidden="true">{bloqueada ? '🔒' : desplegada ? '−' : '+'}</span>
               </button>
 
               {/* Un punto a la vez. Con siete preguntas apiladas se pierde de

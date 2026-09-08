@@ -6,8 +6,10 @@ import { useSesion } from '../../lib/sesion';
 /* Administración del equipo: quién entra y qué ve.
  *
  * Los permisos son dos cosas distintas y las dos importan: el rol define qué
- * puede hacer, y las comunidades asignadas definen sobre qué. Un jefatura sin
- * comunidades asignadas entra y no ve nada; el rol solo no alcanza.
+ * puede hacer, y las comunidades asignadas definen sobre qué. Alguien sin
+ * comunidades asignadas entra y no ve nada; el rol solo no alcanza. Solo el
+ * superadmin escapa de esto: ve todas las comunidades sin asignación, porque
+ * es quien decide las del resto.
  *
  * Crear la cuenta pasa por una función en el servidor, porque dar de alta un
  * usuario exige una clave privilegiada que no puede estar en el navegador. Lo
@@ -18,8 +20,8 @@ import { useSesion } from '../../lib/sesion';
 const ROLES = [
   ['terreno',   'Terreno',    'Solo sus comunidades y sus propios levantamientos. Sin acceso al CRM.'],
   ['jefatura',  'Jefatura',   'Sus comunidades asignadas, el embudo comercial, y puede corregir levantamientos ajenos.'],
-  ['admin',     'Administración', 'Todas las comunidades, crear y dar de baja, administrar el equipo.'],
-  ['superadmin', 'Superadmin', 'Todo, incluido crear y modificar otros superadmin.']
+  ['admin',     'Administración', 'Sus comunidades asignadas, crear y dar de baja, administrar el equipo.'],
+  ['superadmin', 'Superadmin', 'Todas las comunidades sin necesidad de asignación, y puede crear y modificar otros superadmin.']
 ];
 
 export default function Equipo() {
@@ -294,9 +296,10 @@ export default function Equipo() {
                     </p>
                   </div>
 
-                  {/* Administración y superadmin ven todas las comunidades por su
-                      rol: asignarles una en particular no cambia nada. */}
-                  {(persona.rol === 'jefatura' || persona.rol === 'terreno') && (
+                  {/* Solo el superadmin ve todas las comunidades por su rol. El
+                      resto —admin incluido— ve únicamente lo que se le asigna
+                      acá: es lo que decide el superadmin, no el cargo. */}
+                  {persona.rol !== 'superadmin' && (
                     <div className="campo">
                       <label className="etiqueta-campo">Comunidades que ve</label>
                       {comunidades.length === 0 && (
@@ -347,7 +350,8 @@ function Alta({ comunidades, esSuperadmin, correoListo, onCrear, onCancelar }) {
     nombre: '', email: '', rol: 'terreno', comunidades: []
   });
 
-  const necesitaComunidades = datos.rol === 'jefatura' || datos.rol === 'terreno';
+  // Solo un superadmin no necesita asignación: ve todo por su rol.
+  const necesitaComunidades = datos.rol !== 'superadmin';
 
   return (
     <div className="tarjeta" style={{ padding: 16, marginBottom: 16 }}>

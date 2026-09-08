@@ -82,6 +82,15 @@ export default function Inicio() {
   const pendientes = controles?.filter(c => c.estado !== 'enviado' && c.estado !== 'anulado') ?? [];
   const cerrados = controles?.filter(c => c.estado === 'enviado') ?? [];
 
+  // La campana es del usuario, no del panel: alguien en terreno ve en esta
+  // pantalla el trabajo de toda su comunidad —para poder cubrir a un
+  // colega—, pero las novedades que le avisan son solo lo suyo, lo que se le
+  // asignó a él.
+  const misPendientes = useMemo(
+    () => pendientes.filter(c => c.responsable_id === perfil?.id),
+    [pendientes, perfil]
+  );
+
   /* El trabajo se agrupa por persona. Una lista plana no responde la pregunta
    * que importa al mirar el día: quién va sobrecargado y quién tiene hueco. Sin
    * asignar va al final, porque es lo que hay que repartir. */
@@ -121,7 +130,7 @@ export default function Inicio() {
               {hoy.charAt(0).toUpperCase() + hoy.slice(1)}
             </p>
           </div>
-          <Campana pendientes={pendientes} miId={perfil?.id} />
+          <Campana pendientes={misPendientes} miId={perfil?.id} />
           <button className="boton boton-texto" onClick={salir}>Salir</button>
         </div>
       </header>
@@ -159,7 +168,7 @@ export default function Inicio() {
         {puedeConfigurar && (
           <>
             <Link to="/nuevo" className="acceso acceso-principal">
-              <span className="crece">Nuevo levantamiento</span>
+              <span>Nuevo levantamiento</span>
               <span aria-hidden="true">+</span>
             </Link>
 
@@ -168,7 +177,7 @@ export default function Inicio() {
             <div className={'configuracion' + (ajustes ? ' abierta' : '')}>
               <button type="button" className="acceso" aria-expanded={ajustes}
                       onClick={() => setAjustes(v => !v)}>
-                <span className="crece">Configuración</span>
+                <span>Configuración</span>
                 <span aria-hidden="true">{ajustes ? '−' : '+'}</span>
               </button>
               {ajustes && (
@@ -183,7 +192,7 @@ export default function Inicio() {
                 una comunidad es una pregunta distinta a la del día a día que
                 resuelve el resto del inicio. */}
             <Link to="/historico" className="acceso">
-              <span className="crece">Histórico por comunidad</span>
+              <span>Histórico por comunidad</span>
               <span aria-hidden="true">›</span>
             </Link>
           </>
@@ -284,35 +293,41 @@ function Tarjeta({ c, puedeEditar }) {
 
   return (
     <article className="tarjeta" style={{ padding: 16, marginBottom: 12 }}>
-      <div className="fila" style={{ marginBottom: 8, flexWrap: 'wrap', rowGap: 6 }}>
-        <span className="etiqueta-campo crece" style={{ margin: 0 }}>
-          {c.periodo ?? ''}
-        </span>
-        {/* El nombre de la plantilla usada ya distingue el tipo de
-            levantamiento —incidencia, control mensual, registro— sin
-            necesidad de un campo aparte. */}
-        {c.plantilla_nombre && (
-          <span className="chip chip-tipo">{c.plantilla_nombre}</span>
-        )}
-        {c.destino_tipo === 'prospecto' && (
-          <span className="chip chip-diagnostico">Diagnóstico</span>
-        )}
-        {/* Un conteo de críticos mientras el recorrido sigue abierto es una
-            cifra a medio hacer, todavía puede cambiar. Solo informa una vez
-            enviado, cuando ya es el resultado final. */}
-        {c.estado === 'enviado' && c.items_criticos > 0 && (
-          <span className="chip chip-critico">{c.items_criticos} crítico{c.items_criticos > 1 ? 's' : ''}</span>
-        )}
-        {/* Lo no iniciado no tiene avance que mostrar; lo que importa ahí es
-            cuándo corresponde hacerlo. */}
-        {c.estado === 'pendiente' && c.programado_para && (
-          <span className="chip chip-tipo">
-            {new Date(c.programado_para).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
-            {' · '}
-            {new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+      {/* El estado va aparte, a la derecha, en una posición fija: si
+          compartiera fila con el resto de los chips, el que hubiera más o
+          menos de ellos —según el estado— lo haría saltar de lugar o quedar
+          pegado al conteo de avance de más abajo. */}
+      <div className="fila" style={{ marginBottom: 8, alignItems: 'flex-start', gap: 8 }}>
+        <div className="crece" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+          <span className="etiqueta-campo" style={{ margin: 0 }}>
+            {c.periodo ?? ''}
           </span>
-        )}
-        <span className={'chip ' + clase}>{texto}</span>
+          {/* El nombre de la plantilla usada ya distingue el tipo de
+              levantamiento —incidencia, control mensual, registro— sin
+              necesidad de un campo aparte. */}
+          {c.plantilla_nombre && (
+            <span className="chip chip-tipo">{c.plantilla_nombre}</span>
+          )}
+          {c.destino_tipo === 'prospecto' && (
+            <span className="chip chip-diagnostico">Diagnóstico</span>
+          )}
+          {/* Un conteo de críticos mientras el recorrido sigue abierto es una
+              cifra a medio hacer, todavía puede cambiar. Solo informa una vez
+              enviado, cuando ya es el resultado final. */}
+          {c.estado === 'enviado' && c.items_criticos > 0 && (
+            <span className="chip chip-critico">{c.items_criticos} crítico{c.items_criticos > 1 ? 's' : ''}</span>
+          )}
+          {/* Lo no iniciado no tiene avance que mostrar; lo que importa ahí es
+              cuándo corresponde hacerlo. */}
+          {c.estado === 'pendiente' && c.programado_para && (
+            <span className="chip chip-tipo">
+              {new Date(c.programado_para).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
+              {' · '}
+              {new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
+        <span className={'chip ' + clase} style={{ flex: 'none' }}>{texto}</span>
       </div>
 
       <div className="fila" style={{ alignItems: 'flex-start' }}>
