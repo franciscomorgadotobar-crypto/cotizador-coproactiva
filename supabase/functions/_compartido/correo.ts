@@ -79,6 +79,14 @@ export function vigencia(horas: number) {
   return `${horas} horas`;
 }
 
+/* La dirección no se imprime a la vista.
+ *
+ * Antes iba completa abajo, de respaldo por si el botón no se pintaba. Pero
+ * delata dónde está alojado el sistema y se lee como algo improvisado, que no
+ * es la primera impresión que corresponde. El respaldo sigue existiendo —el
+ * mismo enlace, detrás de un texto— y quien reciba el correo en texto plano
+ * igual recibe la dirección entera, porque ahí no hay dónde esconderla.
+ */
 function plantilla(o: {
   titulo: string; saludo: string; parrafo: string; boton: string; enlace: string;
   aviso: string; cierre: string;
@@ -114,9 +122,9 @@ function plantilla(o: {
         </td></tr>
 
         <tr><td style="padding:22px 28px 0;">
-          <p style="margin:0;font:400 11.5px/1.6 Helvetica,Arial,sans-serif;color:#4a5a68;word-break:break-all;">
-            Si el botón no funciona, copia esta dirección en tu navegador:<br>
-            <span style="color:#4a5a68;">${escapar(o.enlace)}</span>
+          <p style="margin:0;font:400 12.5px/1.6 Helvetica,Arial,sans-serif;color:#4a5a68;">
+            ¿No se ve el botón?
+            <a href="${escapar(o.enlace)}" style="color:#2b3138;font-weight:700;text-decoration:underline;">Abre tu enlace de acceso</a>.
           </p>
         </td></tr>
 
