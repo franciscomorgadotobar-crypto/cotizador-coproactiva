@@ -34,10 +34,18 @@ export default function Equipo() {
   const [abierto, setAbierto] = useState(null);
   const [creando, setCreando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  // null = todavía no se sabe. Se consulta al servidor porque la clave del
+  // correo vive ahí; el navegador no tiene cómo saberlo por su cuenta.
+  const [correoListo, setCorreoListo] = useState(null);
 
   const esSuperadmin = perfil?.rol === 'superadmin';
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => {
+    cargar();
+    servidor({ accion: 'estado' })
+      .then(r => setCorreoListo(Boolean(r.correo)))
+      .catch(() => setCorreoListo(false));
+  }, []);
 
   async function cargar() {
     const [p, c, a] = await Promise.all([
@@ -119,8 +127,10 @@ export default function Equipo() {
     setOcupado(true);
     setError(null);
     try {
-      await servidor({ accion: 'clave', id: persona.id, clave });
-      setAviso(`Contraseña cambiada. Entrégasela a ${persona.nombre} y pídele que la cambie.`);
+      const r = await servidor({ accion: 'clave', id: persona.id, clave, avisar: true });
+      setAviso(r.correo?.enviado
+        ? `Contraseña cambiada. Se le avisó por correo a ${persona.email}.`
+        : `Contraseña cambiada. Entrégasela a ${persona.nombre}: el correo no salió.`);
     } catch (e) { setError(e.message); }
     setOcupado(false);
   }
@@ -152,18 +162,31 @@ export default function Equipo() {
           </div>
         )}
 
+        {correoListo === false && (
+          <div className="aviso" style={{ marginBottom: 12 }}>
+            El envío de correo no está configurado, así que las cuentas nuevas se
+            crean igual pero la contraseña la entregas tú.
+          </div>
+        )}
+
         {creando ? (
           <Alta
             comunidades={comunidades}
             esSuperadmin={esSuperadmin}
+            correoListo={correoListo}
             onCancelar={() => setCreando(false)}
             onCrear={async datos => {
               setOcupado(true);
               setError(null);
               try {
-                await servidor({ accion: 'crear', ...datos });
+                const r = await servidor({ accion: 'crear', ...datos });
                 setCreando(false);
-                setAviso(`${datos.nombre} ya puede entrar. Entrégale la contraseña y pídele que la cambie.`);
+                // Se dice si el correo salió o no. Dar por hecho que llegó y que
+                // no haya salido deja a la persona esperando un correo que no
+                // existe y a nadie entregándole la clave.
+                setAviso(r.correo?.enviado
+                  ? `${datos.nombre} ya puede entrar. Le llegó un correo a ${datos.email} con sus accesos.`
+                  : `${datos.nombre} ya puede entrar, pero el correo no salió (${r.correo?.motivo ?? 'sin detalle'}). Entrégale tú la contraseña.`);
                 await cargar();
               } catch (e) { setError(e.message); }
               setOcupado(false);
@@ -273,7 +296,7 @@ export default function Equipo() {
   );
 }
 
-function Alta({ comunidades, esSuperadmin, onCrear, onCancelar }) {
+function Alta({ comunidades, esSuperadmin, correoListo, onCrear, onCancelar }) {
   const [datos, setDatos] = useState({
     nombre: '', email: '', rol: 'terreno', clave: '', comunidades: []
   });
@@ -340,8 +363,10 @@ function Alta({ comunidades, esSuperadmin, onCrear, onCancelar }) {
                placeholder="Mínimo 8 caracteres"
                onChange={e => setDatos({ ...datos, clave: e.target.value })} />
         <p className="micro apagado" style={{ margin: '5px 0 0' }}>
-          Se la entregas tú. Va visible a propósito: si no puedes leerla, no puedes
-          dictarla. Pídele que la cambie al entrar.
+          {correoListo
+            ? 'Se le envía por correo junto con el enlace de la app. Va visible acá por si el correo no llega.'
+            : 'Se la entregas tú. Va visible a propósito: si no puedes leerla, no puedes dictarla.'}
+          {' '}Pídele que la cambie al entrar.
         </p>
       </div>
 
