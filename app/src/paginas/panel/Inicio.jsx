@@ -20,6 +20,9 @@ export default function Inicio() {
   const [controles, setControles] = useState(null);
   const [error, setError] = useState(null);
   const [ajustes, setAjustes] = useState(false);
+  // Qué grupos de trabajador están abiertos. Se abre el propio al llegar: lo
+  // primero que uno mira al entrar es su propio día.
+  const [abiertos, setAbiertos] = useState(null);
 
   const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
   // Jefatura arma plantillas y programa visitas, pero no da de alta usuarios.
@@ -73,7 +76,7 @@ export default function Inicio() {
     };
   }, [controles]);
 
-  const abiertos = controles?.filter(c => c.estado !== 'enviado' && c.estado !== 'anulado') ?? [];
+  const pendientes = controles?.filter(c => c.estado !== 'enviado' && c.estado !== 'anulado') ?? [];
   const cerrados = controles?.filter(c => c.estado === 'enviado') ?? [];
 
   /* El trabajo pendiente se agrupa por persona. Una lista plana no responde la
@@ -81,7 +84,7 @@ export default function Inicio() {
    * hueco. Sin asignar va al final, porque es lo que hay que repartir. */
   const porTrabajador = useMemo(() => {
     const m = new Map();
-    for (const c of abiertos) {
+    for (const c of pendientes) {
       const clave = c.responsable_id ?? 'sin-asignar';
       if (!m.has(clave)) {
         m.set(clave, {
@@ -96,6 +99,22 @@ export default function Inicio() {
       a.id === 'sin-asignar' ? 1 : b.id === 'sin-asignar' ? -1
         : a.nombre.localeCompare(b.nombre, 'es'));
   }, [controles]);
+
+  useEffect(() => {
+    if (abiertos !== null || !porTrabajador.length) return;
+    // El grupo propio si existe; si no, el primero. Dejarlos todos cerrados
+    // haría que al entrar no se vea trabajo alguno.
+    const mio = porTrabajador.find(g => g.id === perfil?.id);
+    setAbiertos(new Set([(mio ?? porTrabajador[0]).id]));
+  }, [porTrabajador, perfil]);
+
+  function alternar(id) {
+    setAbiertos(prev => {
+      const s = new Set(prev ?? []);
+      s.has(id) ? s.delete(id) : s.add(id);
+      return s;
+    });
+  }
 
   const hoy = new Date().toLocaleDateString('es-CL', {
     weekday: 'long', day: 'numeric', month: 'long'
@@ -177,23 +196,34 @@ export default function Inicio() {
         </div>
 
         {controles === null && !error && <p className="cargando">Cargando…</p>}
-        {controles && abiertos.length === 0 && (
+        {controles && pendientes.length === 0 && (
           <p className="vacio">No hay levantamientos pendientes.</p>
         )}
 
-        {porTrabajador.map(grupo => (
-          <div key={grupo.id} className="grupo-trabajador">
-            <div className="cabecera-trabajador">
-              <span className="crece">{grupo.nombre}</span>
-              <span className="micro">
-                {grupo.items.length} pendiente{grupo.items.length > 1 ? 's' : ''}
-              </span>
+        {porTrabajador.map(grupo => {
+          const desplegado = abiertos?.has(grupo.id) ?? false;
+          const criticos = grupo.items.reduce((n, c) => n + (c.items_criticos ?? 0), 0);
+
+          return (
+            <div key={grupo.id} className="grupo-trabajador">
+              <button type="button"
+                      className={'cabecera-trabajador' + (desplegado ? ' abierta' : '')}
+                      aria-expanded={desplegado}
+                      onClick={() => alternar(grupo.id)}>
+                <span className="crece">{grupo.nombre}</span>
+                {criticos > 0 && <span className="punto-critico" aria-label="Tiene críticos" />}
+                <span className="micro">
+                  {grupo.items.length} pendiente{grupo.items.length > 1 ? 's' : ''}
+                </span>
+                <span className="flecha" aria-hidden="true">{desplegado ? '−' : '+'}</span>
+              </button>
+
+              {desplegado && grupo.items.map(c => (
+                <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />
+              ))}
             </div>
-            {grupo.items.map(c => (
-              <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />
-            ))}
-          </div>
-        ))}
+          );
+        })}
 
         {cerrados.length > 0 && (
           <>

@@ -795,18 +795,31 @@ a:hover { color: var(--pizarra); }
 
 /* ------------------------------------------------ Agrupación por persona */
 
-.grupo-trabajador { margin-bottom: 18px; }
+.grupo-trabajador { margin-bottom: 10px; }
+
+/* Desplegable, como las categorías del levantamiento: con cinco personas y
+   varios levantamientos cada una, la lista abierta vuelve a ser interminable. */
 .cabecera-trabajador {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 10px;
-  padding: 0 2px 8px;
+  width: 100%;
+  min-height: var(--tactil);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
   font: 600 11px/1.2 var(--fuente-display);
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--texto-titulo);
+  text-align: left;
+  cursor: pointer;
 }
+.cabecera-trabajador.abierta { border-color: var(--naranja); }
 .cabecera-trabajador .micro { color: var(--texto-tenue); letter-spacing: 0.06em; }
+.cabecera-trabajador .flecha { font-size: 15px; color: var(--texto-tenue); width: 12px; text-align: center; }
 
 /* Lugares del mapa: una fila por comunidad, con sus visitas dentro. */
 .lugar {
