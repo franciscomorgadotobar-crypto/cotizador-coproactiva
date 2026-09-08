@@ -72,7 +72,7 @@ export default function Levantamiento() {
       const [rc, ri, rp, ra] = await Promise.all([
         supabase
           .from('controles_con_avance')
-          .select('id, comunidad_id, prospecto_id, estado, periodo, checkin_en, checkin_precision, creado_en, reabierto_en, motivo_reapertura, destino_nombre, destino_direccion, destino_comuna, destino_tipo, secuencial')
+          .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, checkin_en, checkin_precision, creado_en, reabierto_en, motivo_reapertura, destino_nombre, destino_direccion, destino_comuna, destino_tipo, secuencial, plantilla_nombre')
           .eq('id', id)
           .maybeSingle(),
         supabase
@@ -517,10 +517,23 @@ export default function Levantamiento() {
         </div>
 
         <h1 className="h3">{control.destino_nombre ?? control.comunidades?.nombre}</h1>
-        <p className="chico apagado" style={{ margin: '3px 0 10px' }}>
+        <p className="chico apagado" style={{ margin: '3px 0 6px' }}>
           {[control.destino_direccion, control.destino_comuna].filter(Boolean).join(', ')}
           {control.destino_tipo === 'prospecto' && ' · Diagnóstico comercial'}
         </p>
+
+        {/* Qué tipo de levantamiento es y para cuándo estaba pensado: lo
+            primero que hay que confirmar al entrar, antes de ponerse a
+            responder puntos. */}
+        {(control.plantilla_nombre || control.programado_para) && (
+          <p className="chico apagado" style={{ margin: '0 0 10px' }}>
+            {control.plantilla_nombre}
+            {control.plantilla_nombre && control.programado_para && ' · '}
+            {control.programado_para && new Date(control.programado_para).toLocaleDateString('es-CL', {
+              day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+            })}
+          </p>
+        )}
 
         {control.checkin_en ? (
           <p className="micro" style={{ color: 'var(--ok-texto)', margin: '0 0 10px' }}>

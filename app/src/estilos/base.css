@@ -161,6 +161,46 @@ a:hover { color: var(--pizarra); }
   color: var(--critico-texto);
 }
 
+/* -------------------------------------------------------------------- Modal */
+
+/* Base para cualquier recuadro que se superpone a la pantalla: la
+   confirmación de "hay cambios sin guardar" y el panel de la campana. Cada
+   uno decide su propio contenido; esto solo resuelve el fondo y el marco. */
+.modal-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(20, 22, 26, 0.45);
+  padding: 0;
+}
+.modal {
+  width: 100%;
+  max-width: 440px;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--tarjeta);
+  border-radius: var(--radio-tarjeta) var(--radio-tarjeta) 0 0;
+  padding: 20px;
+  box-shadow: 0 -8px 28px rgba(20, 22, 26, 0.22);
+}
+/* En pantallas anchas —de escritorio, no de terreno— un recuadro centrado se
+   lee mejor que una hoja pegada al borde inferior. */
+@media (min-width: 560px) {
+  .modal-fondo { align-items: center; }
+  .modal { border-radius: var(--radio-tarjeta); }
+}
+
+.modal h2 { margin: 0 0 8px; }
+.modal p.chico { margin: 0 0 18px; }
+
+/* Fila de botones lado a lado, cada uno ocupando lo mismo. No es exclusiva
+   del modal: sirve para cualquier par de acciones del mismo peso. */
+.fila-botones { display: flex; gap: 10px; margin-top: 4px; }
+.fila-botones .boton { flex: 1; }
+
 /* ------------------------------------------------------------------ Campana */
 
 .campana {
@@ -170,6 +210,10 @@ a:hover { color: var(--pizarra); }
   justify-content: center;
   width: var(--tactil);
   height: var(--tactil);
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
   font-size: 19px;
   text-decoration: none;
   filter: grayscale(1);

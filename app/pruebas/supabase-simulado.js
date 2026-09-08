@@ -42,6 +42,8 @@ const CONTROL = {
   periodo: 'Septiembre 2026',
   checkin_en: '2026-09-06T13:14:00.000Z',
   checkin_precision: 12.4,
+  programado_para: '2026-09-08T13:00:00.000Z',
+  plantilla_nombre: 'Control mensual',
   creado_en: '2026-09-06T12:00:00.000Z',
   items_evaluados: 1,
   items_totales: 4,
@@ -111,6 +113,16 @@ VISITAS.push({
   responsable_id: 'u9', responsable_nombre: null,
   estado: 'pendiente', checkin_en: null, checkin_lat: null, checkin_lng: null,
   items_evaluados: 0, items_totales: 12, items_criticos: 0, fotos: 0
+});
+// Asignado a quien inicia sesión en la prueba (PERFIL), programado para hoy:
+// es el caso que ejercita "para hoy" y "se te asignó" en la campana.
+VISITAS.push({
+  ...CONTROL, id: 'v9', destino_nombre: 'Bosque Nativo', destino_comuna: 'Vitacura',
+  responsable_id: PERFIL.id, responsable_nombre: PERFIL.nombre,
+  estado: 'pendiente', checkin_en: null, checkin_lat: null, checkin_lng: null,
+  programado_para: new Date().toISOString(),
+  creado_en: new Date().toISOString(),
+  items_evaluados: 0, items_totales: 10, items_criticos: 0, fotos: 0
 });
 
 const TABLAS = {

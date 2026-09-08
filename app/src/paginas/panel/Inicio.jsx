@@ -43,7 +43,7 @@ export default function Inicio() {
 
     supabase
       .from('controles_con_avance')
-      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, checkin_en, checkin_lat, checkin_lng, responsable_id, responsable_nombre, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo, plantilla_nombre')
+      .select('id, comunidad_id, prospecto_id, estado, periodo, programado_para, enviado_en, creado_en, checkin_en, checkin_lat, checkin_lng, responsable_id, responsable_nombre, items_evaluados, items_totales, items_criticos, fotos, destino_nombre, destino_direccion, destino_comuna, destino_tipo, plantilla_nombre')
       .order('programado_para', { ascending: true })
       .then(({ data, error }) => {
         if (!vigente) return;
@@ -121,8 +121,7 @@ export default function Inicio() {
               {hoy.charAt(0).toUpperCase() + hoy.slice(1)}
             </p>
           </div>
-          <Campana pendientes={pendientes.length}
-                   criticos={pendientes.filter(c => c.items_criticos > 0).length} />
+          <Campana pendientes={pendientes} miId={perfil?.id} />
           <button className="boton boton-texto" onClick={salir}>Salir</button>
         </div>
       </header>
@@ -287,11 +286,7 @@ function Tarjeta({ c, puedeEditar }) {
     <article className="tarjeta" style={{ padding: 16, marginBottom: 12 }}>
       <div className="fila" style={{ marginBottom: 8, flexWrap: 'wrap', rowGap: 6 }}>
         <span className="etiqueta-campo crece" style={{ margin: 0 }}>
-          {c.enviado_en
-            ? new Date(c.enviado_en).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
-            : c.programado_para
-              ? new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-              : c.periodo ?? ''}
+          {c.periodo ?? ''}
         </span>
         {/* El nombre de la plantilla usada ya distingue el tipo de
             levantamiento —incidencia, control mensual, registro— sin
@@ -302,8 +297,20 @@ function Tarjeta({ c, puedeEditar }) {
         {c.destino_tipo === 'prospecto' && (
           <span className="chip chip-diagnostico">Diagnóstico</span>
         )}
-        {c.items_criticos > 0 && (
+        {/* Un conteo de críticos mientras el recorrido sigue abierto es una
+            cifra a medio hacer, todavía puede cambiar. Solo informa una vez
+            enviado, cuando ya es el resultado final. */}
+        {c.estado === 'enviado' && c.items_criticos > 0 && (
           <span className="chip chip-critico">{c.items_criticos} crítico{c.items_criticos > 1 ? 's' : ''}</span>
+        )}
+        {/* Lo no iniciado no tiene avance que mostrar; lo que importa ahí es
+            cuándo corresponde hacerlo. */}
+        {c.estado === 'pendiente' && c.programado_para && (
+          <span className="chip chip-tipo">
+            {new Date(c.programado_para).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
+            {' · '}
+            {new Date(c.programado_para).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })}
+          </span>
         )}
         <span className={'chip ' + clase}>{texto}</span>
       </div>

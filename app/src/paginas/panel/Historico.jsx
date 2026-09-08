@@ -132,7 +132,7 @@ export default function Historico() {
                             : 'Sin fecha'}
                         </span>
                         {c.plantilla_nombre && <span className="chip chip-tipo">{c.plantilla_nombre}</span>}
-                        {c.items_criticos > 0 && (
+                        {c.estado === 'enviado' && c.items_criticos > 0 && (
                           <span className="chip chip-critico">{c.items_criticos} crítico{c.items_criticos > 1 ? 's' : ''}</span>
                         )}
                         <span className={'chip ' + clase}>{texto}</span>

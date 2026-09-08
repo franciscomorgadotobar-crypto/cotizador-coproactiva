@@ -1,33 +1,143 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+
 /* Campana de actividad pendiente.
  *
- * No es una notificación push —eso llega al teléfono aunque la app esté
- * cerrada, y hoy no hay ni claves ni servidor para eso—. Es un aviso que se ve
- * al entrar o al volver a la pestaña: cuánto hay por hacer, con lo crítico
- * destacado, y un salto directo a la lista completa.
+ * No es notificación de teléfono —eso llega con la app cerrada, y hoy no hay
+ * ni claves ni servidor para eso—. Es un resumen que se abre al tocarla: qué
+ * se te asignó, cuánto hay para hoy, cuánto queda en total.
  *
- * El número no es "nuevo desde la última vez que miraste": es lo pendiente en
- * este momento. Distinguir lo nuevo de lo de siempre exigiría guardar qué vio
- * cada persona y cuándo, y eso no existe todavía.
+ * "Se te asignó" se calcula comparando cuándo se creó cada levantamiento
+ * contra la última vez que esta persona abrió la campana en este mismo
+ * teléfono —guardado en localStorage, nada en el servidor—. Es un cálculo
+ * honesto pero limitado: vale para este dispositivo y se olvida si se borran
+ * los datos del sitio. No hay, todavía, un registro de "quién vio qué" que
+ * viaje entre dispositivos.
  */
-export default function Campana({ pendientes, criticos, destino = '#por-hacer' }) {
-  if (pendientes === 0) {
-    return (
-      <span className="campana sin-pendientes" title="Sin pendientes" aria-label="Sin pendientes">
-        🔔
-      </span>
-    );
+
+const CLAVE_ULTIMA_VISTA = 'coproactiva:campana:ultima_vista';
+
+function esHoy(fechaIso) {
+  if (!fechaIso) return false;
+  const a = new Date(fechaIso);
+  const b = new Date();
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function fechaHora(iso) {
+  return new Date(iso).toLocaleDateString('es-CL', {
+    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+export default function Campana({ pendientes, miId }) {
+  const [abierta, setAbierta] = useState(false);
+  const [ultimaVista, setUltimaVista] = useState(undefined); // undefined = todavía no se leyó
+
+  useEffect(() => {
+    try { setUltimaVista(localStorage.getItem(CLAVE_ULTIMA_VISTA)); }
+    catch { setUltimaVista(null); }
+  }, []);
+
+  function cerrar() {
+    setAbierta(false);
+    try { localStorage.setItem(CLAVE_ULTIMA_VISTA, new Date().toISOString()); }
+    catch { /* modo privado, o el navegador bloqueó el storage: no es grave, solo no recuerda */ }
   }
 
+  function verTodas() {
+    cerrar();
+    document.getElementById('por-hacer')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  const total = pendientes.length;
+  const criticos = pendientes.filter(p => p.items_criticos > 0).length;
+  const hoy = pendientes.filter(p => esHoy(p.programado_para));
+  // Sin una vista anterior registrada no hay con qué comparar: mostrar todo
+  // como "nuevo" la primera vez sería una alarma falsa sobre nada.
+  const nuevas = ultimaVista
+    ? pendientes.filter(p => p.responsable_id === miId && p.creado_en && p.creado_en > ultimaVista)
+    : [];
+
   return (
-    <a href={destino} className="campana" aria-label={
-      criticos > 0
-        ? `${pendientes} pendientes, ${criticos} con algo crítico`
-        : `${pendientes} pendientes`
-    }>
-      🔔
-      <span className={'globo' + (criticos > 0 ? ' critico' : '')}>
-        {pendientes > 99 ? '99+' : pendientes}
-      </span>
-    </a>
+    <>
+      <button type="button"
+              className={'campana' + (total === 0 ? ' sin-pendientes' : '')}
+              onClick={() => setAbierta(true)}
+              aria-label={total === 0 ? 'Sin pendientes' : `${total} pendientes, tocar para ver el detalle`}>
+        🔔
+        {total > 0 && (
+          <span className={'globo' + (criticos > 0 ? ' critico' : '')}>
+            {total > 99 ? '99+' : total}
+          </span>
+        )}
+      </button>
+
+      {abierta && (
+        <div className="modal-fondo" role="presentation" onClick={cerrar}>
+          <div className="modal" role="dialog" aria-modal="true" aria-labelledby="campana-titulo"
+               onClick={e => e.stopPropagation()}>
+            <h2 id="campana-titulo" className="h3">Novedades</h2>
+
+            {total === 0 ? (
+              <p className="chico apagado" style={{ margin: '4px 0 4px' }}>
+                Sin pendientes. Al día.
+              </p>
+            ) : (
+              <>
+                {nuevas.length > 0 && (
+                  <div className="aviso" style={{ marginBottom: 14 }}>
+                    <p style={{ margin: '0 0 8px', fontWeight: 600 }}>
+                      {nuevas.length === 1
+                        ? 'Se te asignó una tarea'
+                        : `Se te asignaron ${nuevas.length} tareas nuevas`}
+                    </p>
+                    {nuevas.map(p => (
+                      <Link key={p.id} to={`/control/${p.id}`} onClick={cerrar}
+                            className="chico" style={{ display: 'block', margin: '4px 0' }}>
+                        {p.destino_nombre}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                <p className="chico" style={{ margin: '0 0 4px' }}>
+                  {hoy.length > 0
+                    ? `Tienes ${hoy.length} tarea${hoy.length > 1 ? 's' : ''} para hoy.`
+                    : 'Nada agendado para hoy.'}
+                </p>
+                {hoy.length > 0 && (
+                  <div style={{ margin: '8px 0 14px' }}>
+                    {hoy.map(p => (
+                      <Link key={p.id} to={`/control/${p.id}`} onClick={cerrar}
+                            className="chico" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
+                        <span>{p.destino_nombre}</span>
+                        {p.programado_para && <span className="apagado">{fechaHora(p.programado_para)}</span>}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                <p className="chico apagado" style={{ margin: '0 0 14px' }}>
+                  {total} pendiente{total > 1 ? 's' : ''} en total
+                  {criticos > 0 && `, ${criticos} con algo crítico`}.
+                </p>
+              </>
+            )}
+
+            <div className="fila-botones">
+              <button type="button" className="boton boton-secundario boton-movil" onClick={cerrar}>
+                Cerrar
+              </button>
+              {total > 0 && (
+                <button type="button" className="boton boton-movil" onClick={verTodas}>
+                  Ver todas
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
