@@ -38,6 +38,9 @@ export default function Equipo() {
   // correo vive ahí; el navegador no tiene cómo saberlo por su cuenta.
   const [correoListo, setCorreoListo] = useState(null);
   const [horas, setHoras] = useState(24);
+  // Cuando el correo falla, el enlace igual sirve: se muestra para poder
+  // entregarlo por otro medio en vez de dejar a alguien sin acceso.
+  const [enlace, setEnlace] = useState(null);
 
   const esSuperadmin = perfil?.rol === 'superadmin';
 
@@ -135,9 +138,13 @@ export default function Equipo() {
     setError(null);
     try {
       const r = await servidor({ accion: 'reenviar', id: persona.id });
-      setAviso(r.correo?.enviado
-        ? `Enlace enviado a ${persona.email}. Vence en ${horas} horas.`
-        : `No se pudo enviar el correo: ${r.correo?.motivo ?? 'sin detalle'}`);
+      if (r.correo?.enviado) {
+        setEnlace(null);
+        setAviso(`Enlace enviado a ${persona.email}. Vence en ${horas} horas.`);
+      } else {
+        setEnlace({ persona: persona.nombre, url: r.enlace });
+        setAviso(`El correo no salió (${r.correo?.motivo ?? 'sin detalle'}).`);
+      }
     } catch (e) { setError(e.message); }
     setOcupado(false);
   }
@@ -167,6 +174,37 @@ export default function Equipo() {
             <button className="boton boton-texto" style={{ padding: '6px 0 0' }}
                     onClick={() => setAviso(null)}>Entendido</button>
           </div>
+        )}
+
+        {enlace?.url && (
+          <div className="aviso" style={{ marginBottom: 12 }}>
+            <p style={{ margin: '0 0 6px' }}>
+              Este es el enlace de acceso de {enlace.persona}. Sirve una sola vez y
+              vence en {horas} horas: entrégaselo por WhatsApp o dictándoselo.
+            </p>
+            <p className="enlace-acceso">{enlace.url}</p>
+            <button className="boton boton-texto" style={{ padding: '6px 0 0' }}
+                    onClick={() => { navigator.clipboard?.writeText(enlace.url); setEnlace(null); }}>
+              Copiar y cerrar
+            </button>
+          </div>
+        )}
+
+        {correoListo && (
+          <button className="boton boton-secundario boton-ancho" style={{ marginBottom: 12 }}
+                  disabled={ocupado}
+                  onClick={async () => {
+                    setOcupado(true); setError(null);
+                    try {
+                      const r = await servidor({ accion: 'probar' });
+                      setAviso(r.correo?.enviado
+                        ? `Correo de prueba enviado a ${perfil.email}. Revisa tu bandeja.`
+                        : `El envío falló: ${r.correo?.motivo ?? 'sin detalle'}`);
+                    } catch (e) { setError(e.message); }
+                    setOcupado(false);
+                  }}>
+            Probar el envío de correo
+          </button>
         )}
 
         {correoListo === false && (

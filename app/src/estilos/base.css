@@ -616,3 +616,14 @@ a:hover { color: var(--pizarra); }
 .persona .tu { color: var(--naranja); font-weight: 400; }
 .persona .flecha { font-size: 16px; color: var(--texto-tenue); }
 .persona .detalle { padding: 4px 14px 14px; border-top: 1px solid var(--borde-suave); }
+
+.enlace-acceso {
+  margin: 0;
+  padding: 8px 10px;
+  background: var(--tarjeta);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-control);
+  font: 400 11px/1.4 Menlo, Consolas, monospace;
+  color: var(--texto-cuerpo);
+  word-break: break-all;
+}
