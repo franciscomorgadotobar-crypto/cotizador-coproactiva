@@ -10,7 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), 'functions');
 const salida = join(raiz, '..', '.armado');
-const correo = readFileSync(join(raiz, '_compartido', 'correo.ts'), 'utf8');
+const correo = readFileSync(join(raiz, '_compartido', 'correo.ts'), 'utf8')
+  .replace("'../_compartido/logo.ts'", "'./logo.ts'");
+const logo = readFileSync(join(raiz, '_compartido', 'logo.ts'), 'utf8');
 
 rmSync(salida, { recursive: true, force: true });
 
@@ -21,5 +23,6 @@ for (const fn of ['equipo', 'acceso']) {
     .replace("'../_compartido/correo.ts'", "'./correo.ts'");
   writeFileSync(join(destino, 'index.ts'), indice);
   writeFileSync(join(destino, 'correo.ts'), correo);
+  writeFileSync(join(destino, 'logo.ts'), logo);
   console.log('armado:', fn);
 }

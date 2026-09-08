@@ -1,4 +1,5 @@
 import { SMTPClient } from 'https://deno.land/x/denomailer@1.6.0/mod.ts';
+import { LOGO_PNG } from '../_compartido/logo.ts';
 
 /* Envío de correo desde contacto@coproactiva.cl.
  *
@@ -39,7 +40,17 @@ export async function enviar(para: string, asunto: string, html: string, texto: 
       to: para,
       subject: asunto,
       content: texto,
-      html
+      html,
+      /* El logotipo viaja dentro del correo y el HTML lo pide por cid. Marcado
+       * como inline no aparece en la lista de adjuntos: es parte del diseño,
+       * no un archivo que alguien deba descargar. */
+      attachments: [{
+        contentType: 'image/png',
+        filename: 'coproactiva.png',
+        encoding: 'base64',
+        content: LOGO_PNG,
+        contentID: 'logo'
+      }]
     });
     resultado = { enviado: true };
   } catch (e) {
@@ -102,7 +113,8 @@ function plantilla(o: {
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
              style="max-width:520px;background:#ffffff;border:1px solid #e9e6e2;">
         <tr><td style="padding:28px 28px 0;">
-          <p style="margin:0 0 22px;font:700 15px/1 Georgia,serif;letter-spacing:.02em;color:#d5863b;">CoproActiva</p>
+          <img src="cid:logo" alt="CoproActiva" width="150" height="30"
+               style="display:block;width:150px;height:30px;border:0;outline:none;margin:0 0 22px;">
           <p style="margin:0 0 6px;font:600 9px/1.4 Helvetica,Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#4a5a68;">${escapar(o.titulo)}</p>
           <h1 style="margin:0 0 16px;font:700 21px/1.25 Helvetica,Arial,sans-serif;color:#2b3138;">${escapar(o.saludo)}</h1>
           <p style="margin:0 0 22px;font:400 14px/1.6 Helvetica,Arial,sans-serif;color:#2b3138;">${o.parrafo}</p>
