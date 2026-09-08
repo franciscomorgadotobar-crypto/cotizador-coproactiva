@@ -20,9 +20,11 @@ export default function Inicio() {
   const [controles, setControles] = useState(null);
   const [error, setError] = useState(null);
   const [ajustes, setAjustes] = useState(false);
-  // Qué grupos de trabajador están abiertos. Se abre el propio al llegar: lo
-  // primero que uno mira al entrar es su propio día.
+  // Qué grupos están abiertos, por sección. Se abre el propio en lo pendiente:
+  // lo primero que uno mira al entrar es su propio día. Lo realizado arranca
+  // cerrado, porque es consulta y no trabajo.
   const [abiertos, setAbiertos] = useState(null);
+  const [abiertosHechos, setAbiertosHechos] = useState(() => new Set());
 
   const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
   // Jefatura arma plantillas y programa visitas, pero no da de alta usuarios.
@@ -79,26 +81,11 @@ export default function Inicio() {
   const pendientes = controles?.filter(c => c.estado !== 'enviado' && c.estado !== 'anulado') ?? [];
   const cerrados = controles?.filter(c => c.estado === 'enviado') ?? [];
 
-  /* El trabajo pendiente se agrupa por persona. Una lista plana no responde la
-   * pregunta que importa al mirar el día: quién va sobrecargado y quién tiene
-   * hueco. Sin asignar va al final, porque es lo que hay que repartir. */
-  const porTrabajador = useMemo(() => {
-    const m = new Map();
-    for (const c of pendientes) {
-      const clave = c.responsable_id ?? 'sin-asignar';
-      if (!m.has(clave)) {
-        m.set(clave, {
-          id: clave,
-          nombre: c.responsable_nombre ?? 'Sin asignar',
-          items: []
-        });
-      }
-      m.get(clave).items.push(c);
-    }
-    return [...m.values()].sort((a, b) =>
-      a.id === 'sin-asignar' ? 1 : b.id === 'sin-asignar' ? -1
-        : a.nombre.localeCompare(b.nombre, 'es'));
-  }, [controles]);
+  /* El trabajo se agrupa por persona. Una lista plana no responde la pregunta
+   * que importa al mirar el día: quién va sobrecargado y quién tiene hueco. Sin
+   * asignar va al final, porque es lo que hay que repartir. */
+  const porTrabajador = useMemo(() => agrupar(pendientes), [controles]);
+  const realizadosPorTrabajador = useMemo(() => agrupar(cerrados), [controles]);
 
   useEffect(() => {
     if (abiertos !== null || !porTrabajador.length) return;
@@ -108,8 +95,9 @@ export default function Inicio() {
     setAbiertos(new Set([(mio ?? porTrabajador[0]).id]));
   }, [porTrabajador, perfil]);
 
-  function alternar(id) {
-    setAbiertos(prev => {
+  function alternar(id, hechos = false) {
+    const set = hechos ? setAbiertosHechos : setAbiertos;
+    set(prev => {
       const s = new Set(prev ?? []);
       s.has(id) ? s.delete(id) : s.add(id);
       return s;
@@ -200,40 +188,76 @@ export default function Inicio() {
           <p className="vacio">No hay levantamientos pendientes.</p>
         )}
 
-        {porTrabajador.map(grupo => {
-          const desplegado = abiertos?.has(grupo.id) ?? false;
-          const criticos = grupo.items.reduce((n, c) => n + (c.items_criticos ?? 0), 0);
-
-          return (
-            <div key={grupo.id} className="grupo-trabajador">
-              <button type="button"
-                      className={'cabecera-trabajador' + (desplegado ? ' abierta' : '')}
-                      aria-expanded={desplegado}
-                      onClick={() => alternar(grupo.id)}>
-                <span className="crece">{grupo.nombre}</span>
-                {criticos > 0 && <span className="punto-critico" aria-label="Tiene críticos" />}
-                <span className="micro">
-                  {grupo.items.length} pendiente{grupo.items.length > 1 ? 's' : ''}
-                </span>
-                <span className="flecha" aria-hidden="true">{desplegado ? '−' : '+'}</span>
-              </button>
-
-              {desplegado && grupo.items.map(c => (
-                <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />
-              ))}
-            </div>
-          );
-        })}
+        {porTrabajador.map(grupo => (
+          <GrupoTrabajador
+            key={grupo.id}
+            grupo={grupo}
+            abierto={abiertos?.has(grupo.id) ?? false}
+            onAlternar={() => alternar(grupo.id)}
+            puedeEditar={puedeConfigurar}
+          />
+        ))}
 
         {cerrados.length > 0 && (
           <>
             <div className="grupo-titulo" style={{ marginTop: 20 }}>
               <span className="etiqueta-grupo">Realizados</span>
             </div>
-            {cerrados.map(c => <Tarjeta key={c.id} c={c} puedeEditar={puedeConfigurar} />)}
+            {realizadosPorTrabajador.map(grupo => (
+              <GrupoTrabajador
+                key={grupo.id}
+                grupo={grupo}
+                abierto={abiertosHechos.has(grupo.id)}
+                onAlternar={() => alternar(grupo.id, true)}
+                puedeEditar={puedeConfigurar}
+                hechos
+              />
+            ))}
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* Sin asignar va al final: es lo que falta repartir, no el trabajo de alguien. */
+function agrupar(lista) {
+  const m = new Map();
+  for (const c of lista) {
+    const clave = c.responsable_id ?? 'sin-asignar';
+    if (!m.has(clave)) {
+      m.set(clave, { id: clave, nombre: c.responsable_nombre ?? 'Sin asignar', items: [] });
+    }
+    m.get(clave).items.push(c);
+  }
+  return [...m.values()].sort((a, b) =>
+    a.id === 'sin-asignar' ? 1 : b.id === 'sin-asignar' ? -1
+      : a.nombre.localeCompare(b.nombre, 'es'));
+}
+
+function GrupoTrabajador({ grupo, abierto, onAlternar, puedeEditar, hechos }) {
+  const criticos = grupo.items.reduce((n, c) => n + (c.items_criticos ?? 0), 0);
+  const cuantos = grupo.items.length;
+
+  return (
+    <div className="grupo-trabajador">
+      <button type="button"
+              className={'cabecera-trabajador' + (abierto ? ' abierta' : '')}
+              aria-expanded={abierto}
+              onClick={onAlternar}>
+        <span className="crece">{grupo.nombre}</span>
+        {criticos > 0 && <span className="punto-critico" aria-label="Tiene críticos" />}
+        <span className="micro">
+          {cuantos} {hechos
+            ? (cuantos > 1 ? 'realizados' : 'realizado')
+            : (cuantos > 1 ? 'pendientes' : 'pendiente')}
+        </span>
+        <span className="flecha" aria-hidden="true">{abierto ? '−' : '+'}</span>
+      </button>
+
+      {abierto && grupo.items.map(c => (
+        <Tarjeta key={c.id} c={c} puedeEditar={puedeEditar} />
+      ))}
     </div>
   );
 }
