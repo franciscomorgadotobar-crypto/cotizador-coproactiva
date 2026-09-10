@@ -203,7 +203,10 @@ export default function Inicio() {
         )}
 
         {puedeConfigurar && (
-          <>
+          // En escritorio esto se oculta: son los mismos accesos que ya
+          // están en la barra lateral, y repetirlos como botones acá arriba
+          // solo le resta espacio a lo que importa —el trabajo del día—.
+          <div className="accesos-inicio">
             <Link to="/nuevo" className="acceso acceso-principal">
               <span>Nuevo levantamiento</span>
               <span aria-hidden="true">+</span>
@@ -232,7 +235,7 @@ export default function Inicio() {
               <span>Histórico por comunidad</span>
               <span aria-hidden="true">›</span>
             </Link>
-          </>
+          </div>
         )}
 
         <div className="grupo-titulo" id="por-hacer">
