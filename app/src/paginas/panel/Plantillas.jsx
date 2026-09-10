@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSesion } from '../../lib/sesion';
+import Confirmar from '../../componentes/Confirmar';
 
 /* Las plantillas del catálogo estándar (comunidad_id nulo) sirven para todas
  * las comunidades. Una plantilla con comunidad asignada existe porque ese
@@ -12,8 +13,13 @@ export default function Plantillas() {
   const navegar = useNavigate();
   const [plantillas, setPlantillas] = useState(null);
   const [error, setError] = useState(null);
+  const [porBorrar, setPorBorrar] = useState(null);
 
   const puedeEditar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
+  // Borrar una plantilla se lleva su estructura completa —y la de cualquier
+  // levantamiento que ya la citaba pasa a quedar sin plantilla asociada—: un
+  // alcance mayor que editarla, reservado al superadmin.
+  const puedeBorrar = perfil?.rol === 'superadmin';
 
   useEffect(() => { cargar(); }, []);
 
@@ -63,8 +69,27 @@ export default function Plantillas() {
     navegar(`/plantillas/${nueva.id}`);
   }
 
+  async function borrar() {
+    const p = porBorrar;
+    setPorBorrar(null);
+    setPlantillas(xs => xs.filter(x => x.id !== p.id));
+    const { error } = await supabase.from('plantillas_control').delete().eq('id', p.id);
+    if (error) { setError(error.message); cargar(); }
+  }
+
   return (
     <div className="pantalla">
+      {porBorrar && (
+        <Confirmar
+          titulo="Eliminar plantilla"
+          mensaje={`"${porBorrar.nombre}" se va a borrar junto con todos sus puntos. Los levantamientos que ya la usaron quedan igual, solo pierden la referencia. Esto no se puede deshacer.`}
+          textoConfirmar="Eliminar"
+          textoCancelar="Cancelar"
+          onConfirmar={borrar}
+          onCancelar={() => setPorBorrar(null)}
+        />
+      )}
+
       <header className="encabezado">
         <div className="fila" style={{ marginBottom: 8 }}>
           <button className="boton boton-texto" style={{ padding: '4px 8px 4px 0' }}
@@ -114,6 +139,12 @@ export default function Plantillas() {
                   Duplicar
                 </button>
               </div>
+            )}
+            {puedeBorrar && (
+              <button type="button" className="boton boton-texto peligro"
+                      style={{ marginTop: 8 }} onClick={() => setPorBorrar(p)}>
+                Eliminar plantilla
+              </button>
             )}
           </article>
         ))}

@@ -6,7 +6,8 @@ import { AvisoConexion } from '../../lib/estado';
 import Campana from '../../componentes/Campana';
 import MapaPrevio from '../../componentes/MapaPrevio';
 import { hayConexion } from '../../lib/sincronizacion';
-import { leerControles, guardarControl } from '../../lib/local';
+import { leerControles, guardarControl, borrarControlLocal } from '../../lib/local';
+import Confirmar from '../../componentes/Confirmar';
 
 const CHIP = {
   pendiente: ['chip-pendiente', 'Pendiente'],
@@ -30,6 +31,10 @@ export default function Inicio() {
   const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
   // Jefatura arma plantillas y programa visitas, pero no da de alta usuarios.
   const esAdministracion = perfil && ['superadmin', 'admin'].includes(perfil.rol);
+  // Borrar un levantamiento se lleva su historia completa —fotos, respuestas,
+  // firma—: un alcance mayor que editarlo, reservado al superadmin.
+  const puedeBorrar = perfil?.rol === 'superadmin';
+  const [porBorrar, setPorBorrar] = useState(null);
 
   useEffect(() => {
     let vigente = true;
@@ -118,9 +123,41 @@ export default function Inicio() {
     weekday: 'long', day: 'numeric', month: 'long'
   });
 
+  /* Las fotos y la firma viven en el bucket, no en la fila: borrar el
+   * levantamiento sin esto dejaría los archivos huérfanos, ocupando espacio
+   * sin que nada los referencie. El resto —ítems, pausas, adjuntos— se va
+   * solo, en cascada, al borrar la fila. */
+  async function borrarLevantamiento() {
+    const c = porBorrar;
+    setPorBorrar(null);
+
+    const { data: adjuntos } = await supabase
+      .from('adjuntos').select('storage_path').eq('control_id', c.id);
+    if (adjuntos?.length) {
+      await supabase.storage.from('evidencia').remove(adjuntos.map(a => a.storage_path));
+    }
+
+    const { error } = await supabase.from('controles').delete().eq('id', c.id);
+    if (error) return setError(error.message);
+
+    setControles(xs => xs.filter(x => x.id !== c.id));
+    borrarControlLocal(c.id);
+  }
+
   return (
     <div className="pantalla">
       <AvisoConexion />
+
+      {porBorrar && (
+        <Confirmar
+          titulo="Eliminar levantamiento"
+          mensaje={`"${porBorrar.destino_nombre ?? 'Este levantamiento'}" se va a borrar junto con sus respuestas, fotos y firma. Esto no se puede deshacer.`}
+          textoConfirmar="Eliminar"
+          textoCancelar="Cancelar"
+          onConfirmar={borrarLevantamiento}
+          onCancelar={() => setPorBorrar(null)}
+        />
+      )}
 
       <header className="encabezado">
         <div className="fila">
@@ -214,6 +251,8 @@ export default function Inicio() {
             abierto={abiertos?.has(grupo.id) ?? false}
             onAlternar={() => alternar(grupo.id)}
             puedeEditar={puedeConfigurar}
+            puedeBorrar={puedeBorrar}
+            onBorrar={setPorBorrar}
           />
         ))}
 
@@ -229,6 +268,8 @@ export default function Inicio() {
                 abierto={abiertosHechos.has(grupo.id)}
                 onAlternar={() => alternar(grupo.id, true)}
                 puedeEditar={puedeConfigurar}
+                puedeBorrar={puedeBorrar}
+                onBorrar={setPorBorrar}
                 hechos
               />
             ))}
@@ -262,7 +303,7 @@ function agrupar(lista) {
       : a.nombre.localeCompare(b.nombre, 'es'));
 }
 
-function GrupoTrabajador({ grupo, abierto, onAlternar, puedeEditar, hechos }) {
+function GrupoTrabajador({ grupo, abierto, onAlternar, puedeEditar, puedeBorrar, onBorrar, hechos }) {
   const criticos = grupo.items.reduce((n, c) => n + (c.items_criticos ?? 0), 0);
   const cuantos = grupo.items.length;
 
@@ -281,13 +322,14 @@ function GrupoTrabajador({ grupo, abierto, onAlternar, puedeEditar, hechos }) {
       </button>
 
       {abierto && grupo.items.map(c => (
-        <Tarjeta key={c.id} c={c} puedeEditar={puedeEditar} />
+        <Tarjeta key={c.id} c={c} puedeEditar={puedeEditar}
+                 puedeBorrar={puedeBorrar} onBorrar={onBorrar} />
       ))}
     </div>
   );
 }
 
-function Tarjeta({ c, puedeEditar }) {
+function Tarjeta({ c, puedeEditar, puedeBorrar, onBorrar }) {
   const [clase, texto] = CHIP[c.estado] ?? CHIP.pendiente;
   const pct = c.items_totales ? Math.round((c.items_evaluados / c.items_totales) * 100) : 0;
 
@@ -343,6 +385,12 @@ function Tarjeta({ c, puedeEditar }) {
           <Link to={`/control/${c.id}/editar`} className="editar" aria-label="Editar levantamiento">
             Editar
           </Link>
+        )}
+        {puedeBorrar && (
+          <button type="button" className="editar peligro" style={{ marginLeft: 6 }}
+                  aria-label="Eliminar levantamiento" onClick={() => onBorrar(c)}>
+            Eliminar
+          </button>
         )}
       </div>
 

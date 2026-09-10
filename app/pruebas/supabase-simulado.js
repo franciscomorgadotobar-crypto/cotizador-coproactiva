@@ -233,7 +233,15 @@ export const supabase = {
       upload: (ruta) => {
         registrar('storage', 'evidencia', { ruta });
         return Promise.resolve({ error: null });
-      }
+      },
+      remove: (rutas) => {
+        registrar('storage-borrado', 'evidencia', { rutas });
+        return Promise.resolve({ error: null });
+      },
+      createSignedUrls: (rutas) => Promise.resolve({
+        data: rutas.map(path => ({ path, signedUrl: 'https://prueba/' + path })),
+        error: null
+      })
     })
   }
 };

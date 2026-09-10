@@ -684,7 +684,10 @@ a:hover { color: var(--pizarra); }
   text-decoration: none;
   border: 1px solid var(--borde);
   border-radius: var(--radio-control);
+  background: none;
+  cursor: pointer;
 }
+.editar.peligro { color: var(--critico-texto); border-color: var(--critico-borde); }
 
 .exige-foto {
   margin: 10px 0 0;

@@ -91,6 +91,22 @@ export async function guardarControl(control) {
   return (await base()).put(ALMACENES.controles, control);
 }
 
+/* Al borrar un levantamiento en el servidor, la copia local no se limpia
+ * sola: sin esto, un teléfono que lo tenía descargado seguiría mostrándolo
+ * si se abre sin señal después. */
+export async function borrarControlLocal(controlId) {
+  const db = await base();
+  const [items, fotos] = await Promise.all([
+    db.getAllFromIndex(ALMACENES.items, 'control_id', controlId),
+    db.getAllFromIndex(ALMACENES.fotos, 'control_id', controlId)
+  ]);
+  await Promise.all([
+    db.delete(ALMACENES.controles, controlId),
+    ...items.map(i => db.delete(ALMACENES.items, i.id)),
+    ...fotos.map(f => db.delete(ALMACENES.fotos, f.id))
+  ]);
+}
+
 /* Reemplaza los ítems de un control con lo que vino del servidor.
  *
  * Se conserva lo que el teléfono tenga sin subir: si alguien evaluó un ítem en
