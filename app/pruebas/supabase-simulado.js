@@ -221,6 +221,24 @@ const RPC = {
   })),
   portal_cliente_mantenciones: () => [],
   portal_cliente_requerimientos: () => [],
+  portal_cliente_incidencias: () => [
+    { id: 'inc1', titulo: 'Filtración en subterráneo', descripcion: 'Se detectó humedad en el muro del estacionamiento -2.',
+      estado: 'pendiente', prioridad: 'Alta', creado_en: hace(5), programado_para: null, resuelto_en: null },
+    { id: 'inc2', titulo: 'Portón de acceso vehicular con falla', descripcion: 'El portón no cierra completamente.',
+      estado: 'programada', prioridad: 'Media', creado_en: hace(10), programado_para: hace(-4), resuelto_en: null },
+    { id: 'inc3', titulo: 'Luminaria pasillo 3er piso', descripcion: 'Luz parpadeante reportada por un residente.',
+      estado: 'pendiente', prioridad: 'Baja', creado_en: hace(15), programado_para: hace(2), resuelto_en: null },
+    { id: 'inc4', titulo: 'Fuga menor en sala de bombas', descripcion: 'Se reparó la válvula con fuga.',
+      estado: 'resuelta', prioridad: 'Media', creado_en: hace(20), programado_para: hace(18), resuelto_en: hace(17) }
+  ],
+  portal_cliente_documentos: () => [
+    { id: 'doc1', referencia_id: null, titulo: 'Informe mensual Septiembre 2026', nombre_archivo: 'informe-septiembre-2026.pdf',
+      tipo_mime: 'application/pdf', url: 'https://prueba/informes/informe-septiembre-2026.pdf', fecha: hace(3), origen: 'Levantamiento' },
+    { id: 'doc2', referencia_id: 'v1', titulo: 'Levantamiento control mensual', nombre_archivo: 'control-mensual.pdf',
+      tipo_mime: 'application/pdf', url: 'https://prueba/informes/control-mensual.pdf', fecha: hace(1), origen: 'Levantamiento' },
+    { id: 'doc3', referencia_id: null, titulo: 'Respaldo fotográfico mantención ascensor', nombre_archivo: 'respaldo-ascensor.jpg',
+      tipo_mime: 'image/jpeg', url: null, fecha: hace(8), origen: 'Mantención' }
+  ],
   asignar_rol_cliente: (p) => { registrar('rpc', 'asignar_rol_cliente', p); return null; }
 };
 
