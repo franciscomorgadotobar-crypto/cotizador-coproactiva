@@ -153,7 +153,26 @@ const TABLAS = {
     id: 'p' + n, plantilla_id: 'pl1', grupo: it.grupo, texto: it.texto,
     orden: n, orden_grupo: 0, tipo_ingreso: it.tipo_ingreso, config: it.config, activo: true
   })),
-  adjuntos: []
+  adjuntos: [],
+  activos_comunidad: [
+    { id: 'act1', comunidad_id: COMUNIDAD_ID, nombre: 'Ascensor principal', categoria: 'ascensor',
+      ubicacion: 'Torre A', marca: 'Schindler', modelo: '3300', serie: 'SC-9021', estado: 'operativo',
+      proveedor: 'Ascensores del Sur', documentos: null }
+  ],
+  // Una mantención ya creada, con fecha límite calculada a fin de período, para
+  // poder probar la etiqueta "Fecha límite actual" sin depender de crear una
+  // desde el formulario (el insert simulado no refleja el alta real).
+  mantenimiento_actividades: [
+    { id: 'mant1', comunidad_id: COMUNIDAD_ID, activo_id: 'act1', trabajo: 'Mantención preventiva',
+      frecuencia_unidad: 'meses', frecuencia_valor: 1, fecha_inicio: '2026-08-01',
+      limite_tipo: 'fin_periodo', dia_limite: null, proxima_exigible: '2026-08-31',
+      responsable_id: null, proveedor: 'Ascensores del Sur', evidencias_requeridas: ['Foto', 'Informe'],
+      activa: true, creado_en: '2026-08-01T12:00:00.000Z' }
+  ],
+  mantenimiento_agendamientos: [],
+  ejecuciones_mantenimiento: [],
+  mantenimiento_alertas_config: [],
+  notificaciones_mantenimiento: []
 };
 
 /* Consulta encadenable. Cada método devuelve el mismo objeto y la promesa se
@@ -219,8 +238,19 @@ const RPC = {
     estado: v.estado, periodo: v.periodo, programado_para: v.programado_para,
     creado_en: v.creado_en, checkin_en: v.checkin_en, enviado_en: null
   })),
-  portal_cliente_mantenciones: () => [],
-  portal_cliente_requerimientos: () => [],
+  portal_cliente_mantenciones: () => [
+    { actividad_id: 'mant1', activo_nombre: 'Ascensor principal', activo_categoria: 'Ascensor',
+      trabajo: 'Mantención preventiva', frecuencia_unidad: 'meses', frecuencia_valor: 1,
+      vencimiento_original: hace(10), proxima_exigible: hace(10), programado_para: null,
+      proveedor: 'Ascensores del Sur', ultima_ejecucion: null, ejecutor: null, observaciones: null },
+    { actividad_id: 'mant2', activo_nombre: 'Grupo electrógeno', activo_categoria: 'Generador',
+      trabajo: 'Prueba de partida', frecuencia_unidad: 'meses', frecuencia_valor: 3,
+      vencimiento_original: hace(-25), proxima_exigible: hace(-25), programado_para: null,
+      proveedor: null, ultima_ejecucion: hace(60), ejecutor: 'Luis Cárcamo', observaciones: 'Sin observaciones.' }
+  ],
+  portal_cliente_requerimientos: () => [
+    { id: 'req1', nombre: null, plantilla_nombre: 'Control mensual', tiene_agendamiento: false, proxima_exigible: hace(-6) }
+  ],
   portal_cliente_incidencias: () => [
     { id: 'inc1', titulo: 'Filtración en subterráneo', descripcion: 'Se detectó humedad en el muro del estacionamiento -2.',
       estado: 'pendiente', prioridad: 'Alta', creado_en: hace(5), programado_para: null, resuelto_en: null },

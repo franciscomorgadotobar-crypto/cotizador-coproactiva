@@ -73,6 +73,95 @@ function fechaISOChile(valor = new Date()) {
   return `${porTipo.year}-${porTipo.month}-${porTipo.day}`;
 }
 
+function fechaUTCDesdeISO(valor) {
+  if (!valor || !/^\d{4}-\d{2}-\d{2}$/.test(valor)) return null;
+  const [ano, mes, dia] = valor.split('-').map(Number);
+  return new Date(Date.UTC(ano, mes - 1, dia));
+}
+
+function fechaISODesdeUTC(fecha) {
+  if (!(fecha instanceof Date) || Number.isNaN(fecha.getTime())) return '';
+  return `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, '0')}-${String(fecha.getUTCDate()).padStart(2, '0')}`;
+}
+
+function ultimoDiaMesUTC(ano, mesIndice) {
+  return new Date(Date.UTC(ano, mesIndice + 1, 0));
+}
+
+function fechaDiaMesUTC(ano, mesIndice, dia) {
+  const ultimo = ultimoDiaMesUTC(ano, mesIndice).getUTCDate();
+  return new Date(Date.UTC(ano, mesIndice, Math.min(Math.max(Number(dia) || 1, 1), ultimo)));
+}
+
+function sumarFrecuenciaFecha(fecha, unidad, valor, limiteTipo, diaLimite) {
+  const n = Math.max(Number(valor) || 1, 1);
+  const d = new Date(fecha.getTime());
+  if (limiteTipo === 'fin_periodo') {
+    if (unidad === 'dias') d.setUTCDate(d.getUTCDate() + n);
+    else if (unidad === 'semanas') d.setUTCDate(d.getUTCDate() + n * 7);
+    else if (unidad === 'meses') return ultimoDiaMesUTC(d.getUTCFullYear(), d.getUTCMonth() + n);
+    else if (unidad === 'anos') return new Date(Date.UTC(d.getUTCFullYear() + n, 11, 31));
+    return d;
+  }
+  if (limiteTipo === 'dia_mes' && unidad === 'meses') {
+    return fechaDiaMesUTC(d.getUTCFullYear(), d.getUTCMonth() + n, diaLimite);
+  }
+  if (unidad === 'dias') d.setUTCDate(d.getUTCDate() + n);
+  else if (unidad === 'semanas') d.setUTCDate(d.getUTCDate() + n * 7);
+  else if (unidad === 'meses') {
+    const diaOriginal = d.getUTCDate();
+    const objetivo = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1));
+    return fechaDiaMesUTC(objetivo.getUTCFullYear(), objetivo.getUTCMonth(), diaOriginal);
+  } else if (unidad === 'anos') {
+    const mes = d.getUTCMonth();
+    const dia = d.getUTCDate();
+    return fechaDiaMesUTC(d.getUTCFullYear() + n, mes, dia);
+  }
+  return d;
+}
+
+function primeraFechaLimite(form) {
+  if (form.frecuencia_unidad === 'unica' || form.limite_tipo === 'fecha_especifica') {
+    return form.proxima_exigible || '';
+  }
+  const inicio = fechaUTCDesdeISO(form.fecha_inicio);
+  if (!inicio) return '';
+  const n = Math.max(Number(form.frecuencia_valor) || 1, 1);
+  let limite;
+  if (form.limite_tipo === 'fin_periodo') {
+    if (form.frecuencia_unidad === 'dias') {
+      limite = new Date(inicio.getTime());
+      limite.setUTCDate(limite.getUTCDate() + n - 1);
+    } else if (form.frecuencia_unidad === 'semanas') {
+      limite = new Date(inicio.getTime());
+      limite.setUTCDate(limite.getUTCDate() + n * 7 - 1);
+    } else if (form.frecuencia_unidad === 'meses') {
+      limite = ultimoDiaMesUTC(inicio.getUTCFullYear(), inicio.getUTCMonth() + n - 1);
+    } else if (form.frecuencia_unidad === 'anos') {
+      limite = new Date(Date.UTC(inicio.getUTCFullYear() + n - 1, 11, 31));
+    }
+  } else if (form.limite_tipo === 'dia_mes' && form.frecuencia_unidad === 'meses') {
+    limite = fechaDiaMesUTC(inicio.getUTCFullYear(), inicio.getUTCMonth() + n - 1, form.dia_limite);
+    if (limite < inicio) {
+      limite = fechaDiaMesUTC(inicio.getUTCFullYear(), inicio.getUTCMonth() + n, form.dia_limite);
+    }
+  }
+  return limite ? fechaISODesdeUTC(limite) : '';
+}
+
+function previsualizarFechasLimite(form, cantidad = 3) {
+  const primera = primeraFechaLimite(form);
+  if (!primera) return [];
+  const fechas = [primera];
+  if (form.frecuencia_unidad === 'unica') return fechas;
+  let actual = fechaUTCDesdeISO(primera);
+  for (let i = 1; i < cantidad && actual; i += 1) {
+    actual = sumarFrecuenciaFecha(actual, form.frecuencia_unidad, form.frecuencia_valor, form.limite_tipo, form.dia_limite);
+    fechas.push(fechaISODesdeUTC(actual));
+  }
+  return fechas;
+}
+
 export default function Comunidades() {
   const { id } = useParams();
   return id ? <DetalleComunidad id={id} /> : <ListadoComunidades />;
@@ -209,7 +298,7 @@ function DetalleComunidad({ id }) {
     nombre: '', categoria: '', ubicacion: '', marca: '', modelo: '', serie: '', estado: 'operativo', proveedor: '', documentos: ''
   });
   const [nuevaActividad, setNuevaActividad] = useState({
-    activo_id: '', trabajo: '', frecuencia_unidad: '', frecuencia_valor: '', fecha_inicio: '', proxima_exigible: '', responsable_id: '', proveedor: '', evidencias: ''
+    activo_id: '', trabajo: '', frecuencia_unidad: '', frecuencia_valor: '', fecha_inicio: '', limite_tipo: 'fin_periodo', dia_limite: '', proxima_exigible: '', responsable_id: '', proveedor: '', evidencias: ''
   });
   const [nuevoAgendamiento, setNuevoAgendamiento] = useState({
     actividad_id: '', programado_para: '', responsable_id: ''
@@ -316,11 +405,13 @@ function DetalleComunidad({ id }) {
       const vencimientoYaPaso = vencimiento(a) && vencimiento(a) < hoy;
       return visitaYaPaso || vencimientoYaPaso;
     });
+    const sinAgenda = actividades.filter(a => !conAgenda.has(a.id));
+    const sinAgendaVencidas = sinAgenda.filter(a => a.proxima_exigible && a.proxima_exigible < hoy);
     const idsPendientes = new Set(pendientes.map(a => a.id));
     return {
-      porAgendar: actividades.filter(a => !conAgenda.has(a.id)).length,
+      porAgendar: sinAgenda.filter(a => !a.proxima_exigible || a.proxima_exigible >= hoy).length,
       agendadas: abiertas.filter(a => !idsPendientes.has(a.id) && a.programado_para && new Date(a.programado_para).getTime() > ahora).length,
-      pendientes: pendientes.length
+      pendientes: pendientes.length + sinAgendaVencidas.length
     };
   }, [actividades, agenda]);
 
@@ -356,6 +447,14 @@ function DetalleComunidad({ id }) {
     if (nuevaActividad.frecuencia_unidad !== 'unica' && Number(nuevaActividad.frecuencia_valor) < 1) {
       return setError('La frecuencia debe ser mayor que cero.');
     }
+    if (nuevaActividad.frecuencia_unidad !== 'unica' && nuevaActividad.limite_tipo !== 'fecha_especifica' && !nuevaActividad.fecha_inicio) {
+      return setError('Indica la fecha de inicio para calcular la fecha límite del período.');
+    }
+    if (nuevaActividad.limite_tipo === 'dia_mes' && (Number(nuevaActividad.dia_limite) < 1 || Number(nuevaActividad.dia_limite) > 31)) {
+      return setError('El día límite del mes debe estar entre 1 y 31.');
+    }
+    const fechaLimite = primeraFechaLimite(nuevaActividad);
+    if (!fechaLimite) return setError('Define la fecha límite de esta mantención.');
     setGuardando(true);
     setError(null);
     const { data, error } = await supabase.from('mantenimiento_actividades').insert({
@@ -365,7 +464,9 @@ function DetalleComunidad({ id }) {
       frecuencia_unidad: nuevaActividad.frecuencia_unidad,
       frecuencia_valor: nuevaActividad.frecuencia_unidad === 'unica' ? null : Number(nuevaActividad.frecuencia_valor),
       fecha_inicio: nuevaActividad.fecha_inicio || null,
-      proxima_exigible: nuevaActividad.proxima_exigible || null,
+      limite_tipo: nuevaActividad.frecuencia_unidad === 'unica' ? 'fecha_especifica' : nuevaActividad.limite_tipo,
+      dia_limite: nuevaActividad.limite_tipo === 'dia_mes' ? Number(nuevaActividad.dia_limite) : null,
+      proxima_exigible: fechaLimite,
       responsable_id: nuevaActividad.responsable_id || null,
       proveedor: nuevaActividad.proveedor.trim() || null,
       evidencias_requeridas: nuevaActividad.evidencias.split(',').map(v => v.trim()).filter(Boolean)
@@ -373,7 +474,7 @@ function DetalleComunidad({ id }) {
     setGuardando(false);
     if (error) return setError(error.message);
     setActividades(xs => [...xs, data]);
-    setNuevaActividad({ activo_id: '', trabajo: '', frecuencia_unidad: '', frecuencia_valor: '', fecha_inicio: '', proxima_exigible: '', responsable_id: '', proveedor: '', evidencias: '' });
+    setNuevaActividad({ activo_id: '', trabajo: '', frecuencia_unidad: '', frecuencia_valor: '', fecha_inicio: '', limite_tipo: 'fin_periodo', dia_limite: '', proxima_exigible: '', responsable_id: '', proveedor: '', evidencias: '' });
   }
 
   async function guardarAgendamiento() {
@@ -651,7 +752,18 @@ function DetalleComunidad({ id }) {
                 <div className="comunidad-subgrid">
                   <div className="campo">
                     <label className="etiqueta-campo">Tipo de frecuencia</label>
-                    <select value={nuevaActividad.frecuencia_unidad} onChange={e => setNuevaActividad(x => ({ ...x, frecuencia_unidad: e.target.value }))}>
+                    <select value={nuevaActividad.frecuencia_unidad} onChange={e => {
+                      const unidad = e.target.value;
+                      setNuevaActividad(x => ({
+                        ...x,
+                        frecuencia_unidad: unidad,
+                        frecuencia_valor: unidad === 'unica' ? '' : x.frecuencia_valor,
+                        limite_tipo: unidad === 'unica'
+                          ? 'fecha_especifica'
+                          : (!x.frecuencia_unidad || x.frecuencia_unidad === 'unica' ? 'fin_periodo' : x.limite_tipo),
+                        dia_limite: unidad === 'meses' ? x.dia_limite : ''
+                      }));
+                    }}>
                       <option value="">Definir…</option>
                       <option value="unica">Intervención única</option>
                       <option value="dias">Cada N días</option>
@@ -666,7 +778,25 @@ function DetalleComunidad({ id }) {
                 </div>
                 <div className="comunidad-grid-2">
                   <Campo label="Fecha de inicio" tipo="date" valor={nuevaActividad.fecha_inicio} onChange={v => setNuevaActividad(x => ({ ...x, fecha_inicio: v }))} />
-                  <Campo label="Próxima fecha exigible" tipo="date" valor={nuevaActividad.proxima_exigible} onChange={v => setNuevaActividad(x => ({ ...x, proxima_exigible: v }))} />
+                  {nuevaActividad.frecuencia_unidad && nuevaActividad.frecuencia_unidad !== 'unica' && (
+                    <div className="campo">
+                      <label className="etiqueta-campo">Fecha límite</label>
+                      <select value={nuevaActividad.limite_tipo} onChange={e => setNuevaActividad(x => ({ ...x, limite_tipo: e.target.value, dia_limite: '', proxima_exigible: '' }))}>
+                        <option value="fin_periodo">Último día de cada período</option>
+                        {nuevaActividad.frecuencia_unidad === 'meses' && <option value="dia_mes">Día fijo de cada mes</option>}
+                        <option value="fecha_especifica">Definir primera fecha límite manualmente</option>
+                      </select>
+                    </div>
+                  )}
+                  {nuevaActividad.frecuencia_unidad === 'unica' && (
+                    <Campo label="Fecha límite" tipo="date" valor={nuevaActividad.proxima_exigible} onChange={v => setNuevaActividad(x => ({ ...x, proxima_exigible: v }))} />
+                  )}
+                  {nuevaActividad.frecuencia_unidad !== 'unica' && nuevaActividad.limite_tipo === 'fecha_especifica' && (
+                    <Campo label="Primera fecha límite" tipo="date" valor={nuevaActividad.proxima_exigible} onChange={v => setNuevaActividad(x => ({ ...x, proxima_exigible: v }))} />
+                  )}
+                  {nuevaActividad.frecuencia_unidad === 'meses' && nuevaActividad.limite_tipo === 'dia_mes' && (
+                    <Campo label="Día límite del mes" tipo="number" min="1" max="31" valor={nuevaActividad.dia_limite} onChange={v => setNuevaActividad(x => ({ ...x, dia_limite: v }))} />
+                  )}
                   <div className="campo">
                     <label className="etiqueta-campo">Responsable interno</label>
                     <select value={nuevaActividad.responsable_id} onChange={e => setNuevaActividad(x => ({ ...x, responsable_id: e.target.value }))}>
@@ -676,6 +806,19 @@ function DetalleComunidad({ id }) {
                   </div>
                   <Campo label="Proveedor" valor={nuevaActividad.proveedor} onChange={v => setNuevaActividad(x => ({ ...x, proveedor: v }))} />
                 </div>
+                {previsualizarFechasLimite(nuevaActividad).length > 0 && (
+                  <div className="aviso" style={{ marginBottom: 14 }}>
+                    <strong>Fechas límite previstas</strong>
+                    <div className="micro" style={{ marginTop: 5 }}>
+                      {previsualizarFechasLimite(nuevaActividad).map((f, i) => (
+                        <span key={f}>{i > 0 ? ' · ' : ''}{fechaCL(f)}</span>
+                      ))}
+                    </div>
+                    {nuevaActividad.frecuencia_unidad !== 'unica' && nuevaActividad.limite_tipo === 'fin_periodo' && (
+                      <p className="micro apagado" style={{ margin: '5px 0 0' }}>La visita puede agendarse después; la fecha límite no cambia.</p>
+                    )}
+                  </div>
+                )}
                 <Campo label="Evidencias requeridas" valor={nuevaActividad.evidencias} onChange={v => setNuevaActividad(x => ({ ...x, evidencias: v }))} placeholder="Foto, informe, certificado (separados por coma)" />
                 <button className="boton boton-movil" onClick={guardarActividad} disabled={guardando}>Agregar al plan</button>
               </div>
@@ -696,7 +839,7 @@ function DetalleComunidad({ id }) {
                   </div>
                   <p className="dato-chico" style={{ margin: '5px 0 0' }}>{activo?.nombre ?? 'Activo no disponible'}</p>
                   <p className="micro apagado" style={{ margin: '5px 0 0' }}>
-                    Próxima exigible: {a.proxima_exigible ? fechaCL(a.proxima_exigible) : 'por definir'}
+                    Fecha límite actual: {a.proxima_exigible ? fechaCL(a.proxima_exigible) : 'por definir'}
                     {a.responsable_id ? ` · Responsable: ${equipoPorId.get(a.responsable_id)?.nombre ?? 'Asignado'}` : ''}
                   </p>
                   {a.evidencias_requeridas?.length > 0 && (
@@ -776,7 +919,7 @@ function DetalleComunidad({ id }) {
                   </div>
                   <p className="dato-chico" style={{ margin: '8px 0 0' }}>Programada: {fechaCL(item.programado_para, true)}</p>
                   {item.vencimiento_original && (
-                    <p className="micro apagado" style={{ margin: '4px 0 0' }}>Vencimiento exigible original: {fechaCL(item.vencimiento_original)}</p>
+                    <p className="micro apagado" style={{ margin: '4px 0 0' }}>Fecha límite original: {fechaCL(item.vencimiento_original)}</p>
                   )}
                   {item.programado_original && item.programado_original !== item.programado_para && (
                     <p className="micro apagado" style={{ margin: '4px 0 0' }}>Programación original: {fechaCL(item.programado_original, true)}</p>

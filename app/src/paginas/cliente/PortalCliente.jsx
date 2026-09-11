@@ -826,7 +826,7 @@ function LevantamientosComunidad({ vista }) {
               <div key={r.id} className="tarjeta portal-item portal-item-pendiente">
                 <div className="portal-etiquetas"><span className="portal-tipo">Levantamiento</span><span className="portal-estado">Sin programar</span></div>
                 <strong>{r.nombre || r.plantilla_nombre}</strong>
-                <span className="micro apagado">{r.proxima_exigible ? `Fecha exigible: ${fechaCL(r.proxima_exigible)}` : 'Aún sin fecha programada'}</span>
+                <span className="micro apagado">{r.proxima_exigible ? `Fecha límite: ${fechaCL(r.proxima_exigible)}` : 'Aún sin fecha programada'}</span>
               </div>
             ))}
           </div>
@@ -856,7 +856,7 @@ function MantencionesComunidad({ vista }) {
                 <p className="portal-item-texto">{m.trabajo}</p>
                 <div className="micro apagado portal-meta">
                   <span>{frecuencia(m)}</span>
-                  {vencimiento && <span>{vencida ? 'Vencida' : 'Próxima exigible'}: {fechaCL(vencimiento)}</span>}
+                  {vencimiento && <span>{vencida ? 'Vencida' : 'Fecha límite'}: {fechaCL(vencimiento)}</span>}
                   {m.programado_para && <span>Programada: {fechaCL(m.programado_para, true)}</span>}
                   {m.proveedor && <span>Proveedor: {m.proveedor}</span>}
                 </div>
