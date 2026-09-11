@@ -205,8 +205,32 @@ function registrar(operacion, tabla, datos) {
 
 export const hayCredenciales = true;
 
+// Respuestas mínimas para las RPC del portal cliente: alcanza para que la
+// pantalla monte y se pueda navegar, no reproduce las reglas de negocio del
+// servidor (eso ya se probó directo contra la base, no acá).
+const RPC = {
+  portal_cliente_dashboard: () => [{
+    comunidad_id: COMUNIDAD_ID, nombre: 'Edificio de prueba', comuna: 'San Bernardo',
+    direccion: 'América 755', latitud: -33.589, longitud: -70.699,
+    por_agendar: 1, agendados: 1, pendientes: 1
+  }],
+  portal_cliente_levantamientos: () => VISITAS.map(v => ({
+    id: v.id, comunidad_id: v.comunidad_id, plantilla_id: 'pl1', plantilla_nombre: v.plantilla_nombre,
+    estado: v.estado, periodo: v.periodo, programado_para: v.programado_para,
+    creado_en: v.creado_en, checkin_en: v.checkin_en, enviado_en: null
+  })),
+  portal_cliente_mantenciones: () => [],
+  portal_cliente_requerimientos: () => [],
+  asignar_rol_cliente: (p) => { registrar('rpc', 'asignar_rol_cliente', p); return null; }
+};
+
 export const supabase = {
   from: consulta,
+  rpc: (nombre, params) => {
+    registrar('rpc', nombre, params);
+    const f = RPC[nombre];
+    return Promise.resolve({ data: f ? f(params) : [], error: f ? null : { message: `RPC no simulada: ${nombre}` } });
+  },
   auth: {
     getSession: () => Promise.resolve({
       data: { session: { user: { id: PERFIL.id, email: PERFIL.email }, access_token: 'token-de-prueba' } }

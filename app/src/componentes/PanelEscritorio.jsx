@@ -3,15 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { useSesion } from '../lib/sesion';
 import { supabase } from '../lib/supabase';
 
-/* Barra lateral de escritorio.
- *
- * En el teléfono no existe: el CSS la oculta por completo bajo el punto de
- * quiebre y esta pantalla vuelve a ser exactamente la de terreno, una
- * columna angosta con su propio "‹ Inicio". Recién en una ventana ancha
- * —oficina, no la vereda de un edificio— aparece como navegación fija, y el
- * contenido de cada pantalla se centra a su lado en vez de estirarse de
- * borde a borde.
- */
 function activa(pathname, ruta) {
   if (ruta === '/') return pathname === '/';
   return pathname === ruta || pathname.startsWith(ruta + '/');
@@ -33,21 +24,35 @@ export default function PanelEscritorio({ children, anchoCompleto = false }) {
     return () => { vigente = false; };
   }, [perfil?.id, pathname]);
 
+  const esCliente = perfil?.rol === 'cliente';
   const puedeConfigurar = perfil && ['superadmin', 'admin', 'jefatura'].includes(perfil.rol);
   const esAdministracion = perfil && ['superadmin', 'admin'].includes(perfil.rol);
-  const accesos = [
-    { ruta: '/', etiqueta: 'Inicio', mostrar: true },
-    { ruta: '/nuevo', etiqueta: 'Nuevo levantamiento', mostrar: puedeConfigurar },
-    { ruta: '/comunidades', etiqueta: alertasMantencion > 0 ? `Comunidades (${alertasMantencion})` : 'Comunidades', mostrar: true },
-    { ruta: '/plantillas', etiqueta: 'Plantillas', mostrar: puedeConfigurar },
-    { ruta: '/equipo', etiqueta: 'Equipo y permisos', mostrar: esAdministracion },
-    { ruta: '/mapa', etiqueta: 'Mapa', mostrar: true }
-  ];
+  const esSuperadmin = perfil?.rol === 'superadmin';
+
+  const accesos = esCliente
+    ? [
+        {
+          ruta: '/portal',
+          etiqueta: alertasMantencion > 0 ? `Mi portal (${alertasMantencion})` : 'Mi portal',
+          mostrar: true
+        }
+      ]
+    : [
+        { ruta: '/', etiqueta: 'Inicio', mostrar: true },
+        { ruta: '/nuevo', etiqueta: 'Nuevo levantamiento', mostrar: puedeConfigurar },
+        { ruta: '/comunidades', etiqueta: alertasMantencion > 0 ? `Comunidades (${alertasMantencion})` : 'Comunidades', mostrar: true },
+        { ruta: '/plantillas', etiqueta: 'Plantillas', mostrar: puedeConfigurar },
+        { ruta: '/equipo', etiqueta: 'Equipo y permisos', mostrar: esAdministracion },
+        { ruta: '/clientes', etiqueta: 'Clientes y accesos', mostrar: esSuperadmin },
+        { ruta: '/mapa', etiqueta: 'Mapa', mostrar: true }
+      ];
+
+  const inicio = esCliente ? '/portal' : '/';
 
   return (
     <div className="layout-escritorio">
       <nav className="barra-lateral" aria-label="Navegación">
-        <Link to="/" className="marca-lateral">
+        <Link to={inicio} className="marca-lateral">
           <img src={import.meta.env.BASE_URL + 'logo-coproactiva.svg'} alt="" />
           <span>CoproActiva</span>
         </Link>
@@ -62,9 +67,14 @@ export default function PanelEscritorio({ children, anchoCompleto = false }) {
 
         <div className="crece" />
         <div className="usuario-lateral">
-          <span className="micro apagado" style={{ display: 'block', marginBottom: 6 }}>
+          <span className="micro apagado" style={{ display: 'block', marginBottom: 3 }}>
             {perfil?.nombre}
           </span>
+          {esCliente && (
+            <span className="micro apagado" style={{ display: 'block', marginBottom: 6 }}>
+              Cliente
+            </span>
+          )}
           <button type="button" className="boton boton-texto" style={{ padding: 0 }} onClick={salir}>
             Salir
           </button>
