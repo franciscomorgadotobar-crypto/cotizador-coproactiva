@@ -295,7 +295,7 @@ export default function PortalCliente() {
 }
 
 function DashboardCliente() {
-  const { perfil } = useSesion();
+  const { perfil, salir } = useSesion();
   const [vistas, setVistas] = useState(null);
   const [error, setError] = useState(null);
 
@@ -351,10 +351,15 @@ function DashboardCliente() {
   return (
     <div className="pantalla portal-pantalla">
       <header className="encabezado portal-encabezado">
-        <h1 className="h3">Mi portal</h1>
-        <p className="chico apagado" style={{ margin: '4px 0 0' }}>
-          Lo que requiere atención, lo que viene y lo que ya se realizó en tus comunidades.
-        </p>
+        <div className="fila" style={{ alignItems: 'flex-start' }}>
+          <div className="crece">
+            <h1 className="h3">Mi portal</h1>
+            <p className="chico apagado" style={{ margin: '4px 0 0' }}>
+              Lo que requiere atención, lo que viene y lo que ya se realizó en tus comunidades.
+            </p>
+          </div>
+          <button className="boton boton-texto" onClick={salir}>Salir</button>
+        </div>
       </header>
 
       <div className="cuerpo portal-cuerpo">
