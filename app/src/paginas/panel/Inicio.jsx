@@ -224,6 +224,7 @@ export default function Inicio() {
                 <div className="dentro">
                   <Link to="/plantillas">Plantillas de levantamiento</Link>
                   {esAdministracion && <Link to="/equipo">Equipo y permisos</Link>}
+                  {perfil?.rol === 'superadmin' && <Link to="/clientes">Clientes y accesos</Link>}
                 </div>
               )}
             </div>
