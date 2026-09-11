@@ -35,6 +35,10 @@ export default function Equipo() {
   const [aviso, setAviso] = useState(null);
   const [abierto, setAbierto] = useState(null);
   const [creando, setCreando] = useState(false);
+  // Quien ya no trabaja acá se da de baja, no se borra —queda la historia de
+  // sus levantamientos—, pero no por eso tiene que seguir ocupando espacio en
+  // esta lista cada vez que se busca a alguien del equipo actual.
+  const [mostrarInactivos, setMostrarInactivos] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   // null = todavía no se sabe. Se consulta al servidor porque la clave del
   // correo vive ahí; el navegador no tiene cómo saberlo por su cuenta.
@@ -248,7 +252,15 @@ export default function Equipo() {
 
         {gente === null && !error && <p className="cargando">Cargando…</p>}
 
-        {gente?.map(persona => {
+        {gente && gente.some(p => !p.activo) && (
+          <label className="marca" style={{ marginBottom: 12 }}>
+            <input type="checkbox" checked={mostrarInactivos}
+                   onChange={e => setMostrarInactivos(e.target.checked)} />
+            <span>Mostrar dados de baja ({gente.filter(p => !p.activo).length})</span>
+          </label>
+        )}
+
+        {gente?.filter(p => mostrarInactivos || p.activo).map(persona => {
           const desplegada = abierto === persona.id;
           const mias = asignaciones[persona.id] ?? [];
           // Un admin no puede tocar a un superadmin, ni ascender a nadie a ese

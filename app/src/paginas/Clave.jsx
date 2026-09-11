@@ -112,11 +112,23 @@ export default function Clave() {
 
         {estado === 'vencido' && (
           <>
-            <h1 className="h2" style={{ marginBottom: 6 }}>Este enlace ya no sirve</h1>
-            <p className="chico apagado" style={{ margin: '0 0 20px' }}>
-              Los enlaces de acceso valen una sola vez y caducan a las pocas horas.
-              Escribe tu correo y te mandamos uno nuevo.
-            </p>
+            {token ? (
+              <>
+                <h1 className="h2" style={{ marginBottom: 6 }}>Este enlace ya no sirve</h1>
+                <p className="chico apagado" style={{ margin: '0 0 20px' }}>
+                  Los enlaces de acceso valen una sola vez y caducan a las pocas horas.
+                  Escribe tu correo y te mandamos uno nuevo.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="h2" style={{ marginBottom: 6 }}>¿Olvidaste tu contraseña?</h1>
+                <p className="chico apagado" style={{ margin: '0 0 20px' }}>
+                  Escribe tu correo y te mandamos un enlace de un solo uso para crear una
+                  contraseña nueva.
+                </p>
+              </>
+            )}
 
             {pedido?.ok ? (
               <div className="aviso" role="status">

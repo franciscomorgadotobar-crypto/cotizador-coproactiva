@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase, hayCredenciales } from '../lib/supabase';
 
 export default function Ingreso() {
@@ -80,6 +81,10 @@ export default function Ingreso() {
             {enviando ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
+
+        <p className="micro" style={{ marginTop: 16, textAlign: 'center' }}>
+          <Link to="/clave">¿Olvidaste tu contraseña?</Link>
+        </p>
 
         <p className="micro" style={{ marginTop: 22 }}>
           ¿Problemas para entrar? Escribe a contacto@coproactiva.cl
