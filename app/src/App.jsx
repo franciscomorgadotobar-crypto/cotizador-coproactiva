@@ -8,7 +8,7 @@ import Plantillas from './paginas/panel/Plantillas';
 import EditorPlantilla from './paginas/panel/Plantilla';
 import Programar from './paginas/panel/Programar';
 import Equipo from './paginas/panel/Equipo';
-import Historico from './paginas/panel/Historico';
+import Comunidades from './paginas/panel/Comunidades';
 import PanelEscritorio from './componentes/PanelEscritorio';
 
 /* El mapa se carga aparte: Leaflet y sus estilos pesan, y no tienen por qué
@@ -20,6 +20,7 @@ function Privada({ children }) {
   const { sesion, perfil, cargando } = useSesion();
   if (cargando) return <p className="cargando">Cargando…</p>;
   if (!sesion) return <Navigate to="/ingreso" replace />;
+
   // Un usuario dado de baja conserva su cuenta en auth pero no entra.
   if (perfil && !perfil.activo) {
     return (
@@ -44,7 +45,10 @@ export default function App() {
       <Route path="/plantillas" element={<Privada><PanelEscritorio><Plantillas /></PanelEscritorio></Privada>} />
       <Route path="/plantillas/:id" element={<Privada><PanelEscritorio><EditorPlantilla /></PanelEscritorio></Privada>} />
       <Route path="/equipo" element={<Privada><PanelEscritorio><Equipo /></PanelEscritorio></Privada>} />
-      <Route path="/historico" element={<Privada><PanelEscritorio><Historico /></PanelEscritorio></Privada>} />
+      <Route path="/comunidades" element={<Privada><PanelEscritorio><Comunidades /></PanelEscritorio></Privada>} />
+      <Route path="/comunidades/:id" element={<Privada><PanelEscritorio><Comunidades /></PanelEscritorio></Privada>} />
+      {/* Compatibilidad con enlaces guardados de la pantalla anterior. */}
+      <Route path="/historico" element={<Navigate to="/comunidades" replace />} />
       <Route path="/mapa" element={
         <Privada>
           <PanelEscritorio anchoCompleto>

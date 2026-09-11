@@ -160,8 +160,12 @@ const TABLAS = {
  * resuelve al final, igual que el cliente real. */
 function consulta(tabla) {
   let filas = [...(TABLAS[tabla] ?? [])];
+  let pedirConteo = false;
   const api = {
-    select: () => api,
+    select: (_campos, opciones) => {
+      if (opciones?.count) pedirConteo = true;
+      return api;
+    },
     eq: (columna, valor) => {
       if (filas.length && columna in (filas[0] ?? {})) {
         filas = filas.filter(f => f[columna] === valor);
@@ -174,6 +178,7 @@ function consulta(tabla) {
     },
     not: () => api,
     order: () => api,
+    limit: n => { filas = filas.slice(0, n); return api; },
     insert: d => {
       registrar('insert', tabla, d);
       const fila = Array.isArray(d) ? d[0] : d;
@@ -186,7 +191,8 @@ function consulta(tabla) {
     single: () => Promise.resolve({ data: filas[0] ?? null, error: null }),
     maybeSingle: () => Promise.resolve({ data: filas[0] ?? null, error: null }),
     then: (resolver, rechazar) =>
-      Promise.resolve({ data: filas, error: null }).then(resolver, rechazar)
+      Promise.resolve({ data: filas, count: pedirConteo ? filas.length : null, error: null })
+        .then(resolver, rechazar)
   };
   return api;
 }

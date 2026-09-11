@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useSesion } from '../../lib/sesion';
 
@@ -15,13 +15,17 @@ import { useSesion } from '../../lib/sesion';
  * levantamiento es independiente: cambiar la plantilla después no altera los ya
  * programados, porque un levantamiento en curso no puede cambiar de preguntas a
  * mitad del recorrido.
+ *
+ * Si se entra desde /comunidades/:id se usa ?comunidad=<id>. No existe un segundo
+ * formulario: este mismo flujo abre con la comunidad preseleccionada.
  */
 export default function Programar() {
   const { id } = useParams();          // sin id = uno nuevo
+  const [searchParams] = useSearchParams();
+  const comunidadInicial = searchParams.get('comunidad');
   const navegar = useNavigate();
   const { perfil } = useSesion();
   const editando = Boolean(id);
-
   const [comunidades, setComunidades] = useState([]);
   const [prospectos, setProspectos] = useState([]);
   const [plantillas, setPlantillas] = useState([]);
@@ -35,7 +39,6 @@ export default function Programar() {
     periodo: '',
     programado_para: ''
   });
-
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
 
@@ -60,8 +63,10 @@ export default function Programar() {
       setEquipo(eq.data ?? []);
 
       if (!editando) {
+        const comunidadValida = comunidadInicial && (com.data ?? []).some(c => c.id === comunidadInicial);
         setDatos(d => ({
           ...d,
+          destino: comunidadValida ? `comunidad:${comunidadInicial}` : d.destino,
           responsable_id: perfil?.id ?? '',
           periodo: mesEnCurso()
         }));
@@ -75,7 +80,6 @@ export default function Programar() {
         .maybeSingle();
       if (error) return setError(error.message);
       if (!data) return setError('Este levantamiento no existe o no tienes acceso.');
-
       setControl(data);
       setDatos({
         destino: data.comunidad_id
@@ -89,12 +93,17 @@ export default function Programar() {
           : ''
       });
     })();
-  }, [id]);
+  }, [id, comunidadInicial, perfil?.id]);
 
   function mesEnCurso() {
     const d = new Date();
     const mes = d.toLocaleDateString('es-CL', { month: 'long' });
     return mes.charAt(0).toUpperCase() + mes.slice(1) + ' ' + d.getFullYear();
+  }
+
+  function volver() {
+    if (comunidadInicial) return navegar(`/comunidades/${comunidadInicial}?seccion=levantamientos`);
+    navegar('/');
   }
 
   async function guardar() {
@@ -103,7 +112,6 @@ export default function Programar() {
 
     setGuardando(true);
     setError(null);
-
     const [tipo, destinoId] = datos.destino.split(':');
     const plantillaElegida = plantillas.find(p => p.id === datos.plantilla_id);
     const fila = {
@@ -131,7 +139,7 @@ export default function Programar() {
       const { error } = await supabase.from('controles').update(cambios).eq('id', id);
       setGuardando(false);
       if (error) return setError(error.message);
-      return navegar('/');
+      return volver();
     }
 
     const { data: nuevo, error: e1 } = await supabase
@@ -176,7 +184,6 @@ export default function Programar() {
   async function reabrir() {
     const motivo = prompt('¿Por qué se reabre este levantamiento?');
     if (motivo === null) return;
-
     setGuardando(true);
     const { error } = await supabase.from('controles').update({
       estado: 'en_curso',
@@ -190,19 +197,17 @@ export default function Programar() {
   }
 
   const enviado = control?.estado === 'enviado';
-
   return (
     <div className="pantalla">
       <header className="encabezado">
         <div className="fila" style={{ marginBottom: 8 }}>
           <button className="boton boton-texto" style={{ padding: '4px 8px 4px 0' }}
-                  onClick={() => navegar('/')}>
-            ‹ Inicio
+                  onClick={volver}>
+            {comunidadInicial ? '‹ Comunidad' : '‹ Inicio'}
           </button>
         </div>
         <h1 className="h3">{editando ? 'Editar levantamiento' : 'Nuevo levantamiento'}</h1>
       </header>
-
       <div className="cuerpo">
         {error && <div className="aviso aviso-critico" style={{ marginBottom: 12 }}>{error}</div>}
 

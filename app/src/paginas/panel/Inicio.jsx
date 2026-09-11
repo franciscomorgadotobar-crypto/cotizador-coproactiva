@@ -231,8 +231,8 @@ export default function Inicio() {
             {/* Página aparte y no una sección más: consultar el historial de
                 una comunidad es una pregunta distinta a la del día a día que
                 resuelve el resto del inicio. */}
-            <Link to="/historico" className="acceso">
-              <span>Histórico por comunidad</span>
+            <Link to="/comunidades" className="acceso">
+              <span>Comunidades</span>
               <span aria-hidden="true">›</span>
             </Link>
           </div>
